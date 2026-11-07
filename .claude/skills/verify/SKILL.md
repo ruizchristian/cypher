@@ -19,7 +19,8 @@ Run from the repo root, in this order. Report every step's actual result.
 - No denylisted telemetry, crash-reporting or ad packages in `pubspec.lock`. It warns on direct HTTP clients.
 - No `package:flutter` imports under `lib/core/otp/`, and no `DateTime.now()` anywhere under `lib/core/`.
 - No `print(` in `lib/`. It warns on `debugPrint(` and `dart:developer` `log(`.
-- TODO lines for `FLAG_SECURE` in `MainActivity`, and for Android Auto Backup not yet disabled.
+- Android backup is off: `allowBackup="false"`, plus `data_extraction_rules.xml` excluding every domain from cloud backup and device transfer.
+- A TODO line while `FLAG_SECURE` is not yet set in `MainActivity`.
 
 ## Reporting
 

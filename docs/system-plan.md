@@ -150,7 +150,8 @@ secure storage (Keystore/Keychain)          app support dir
 - **First run**: generate the DEK, write an empty vault, and require setting a PIN before the first account can be added.
 - **iOS reinstall**: Keychain items survive app deletion. If `vault.bin` is missing but a DEK exists, the app was reinstalled, so wipe the stale Keychain items and start fresh.
 - **Android key loss** (Keystore invalidated, data restored onto another device): the vault fails to decrypt. Show a dedicated "vault unreadable, restore from backup" screen. Never silently create an empty vault over the old file; move the unreadable file aside instead.
-- **`KeyWrapper` (v1)**: `Future<Uint8List> unwrapDek()` / `wrapDek(Uint8List)`. The v1 implementation reads the raw DEK from `SecretStore`. All vault code depends only on this interface.
+- **`KeyWrapper` (v1)**: `readKey()` / `storeKey(Uint8List)` / `deleteKey()` (`lib/core/security/key_wrapper.dart`). The v1 implementation reads the raw DEK from `SecretStore`. All vault code depends only on this interface.
+- **Memory hygiene (accepted limit):** byte buffers that hold the key or decrypted vault are zeroed after use, and on `lock()`. Decoded JSON and Base32 text pass through immutable Dart `String`s, which cannot be wiped and stay in memory until garbage-collected. Closing this gap would need a byte-level codec; revisit together with v2 (§6.1).
 
 ### 6.1 Auth-bound keys (v2, decided)
 
@@ -166,7 +167,7 @@ secure storage
 - **iOS**: `K_bio` is a Keychain item with `SecAccessControl` `.biometryCurrentSet`, `ThisDeviceOnly`.
 - Either path recovers the DEK. If `K_bio` is invalidated (new fingerprint enrolled), the user unlocks with the PIN and the app re-wraps the DEK under a fresh `K_bio`.
 - The PIN hash for throttling is replaced by the AES-GCM authentication check on `cypher.dek.pin`: a wrong PIN fails to decrypt. Throttling state still persists.
-- This needs a native platform channel (Kotlin and Swift) beyond `flutter_secure_storage` and `local_auth`. That platform code gets its own security review.
+- This needs a native platform channel (Kotlin and Swift) beyond `flutter_secure_storage` and `local_auth`. That platform code gets its own security review. Note: `flutter_secure_storage` 11 ships `AndroidOptions.biometric(enforceBiometrics: true)` (a Keystore key that needs auth per use). Evaluate it before writing a custom Android channel, though the PIN-wrapped copy of the DEK is still needed.
 - Migration from v1: at the first v2 unlock, read the raw DEK, write both wrapped forms, then delete the raw DEK. The vault file is untouched.
 
 - **Settings** that are not secret may use `shared_preferences`, but only if a second package is justified. Otherwise store them inside the vault (preferred: one fewer dependency).
@@ -255,10 +256,10 @@ Every item goes through `/deliver`. The 🔒 items are **sensitive**: their plan
 |---|---|---|
 | **M0 Foundations** ✅ | `git init`; remove the counter template; `CypherApp`, theme (light/dark), route table, Riverpod; set `minSdk = 30` in `android/app/build.gradle.kts`; delete the `linux/`, `macos/`, `windows/` and `web/` folders and drop the guard's macOS entitlement check; replace the widget smoke test; record D1/D2/D8/D9 in `architecture.md` | The app launches to a placeholder screen; `/verify` is green; the template code is gone |
 | **M1 OTP core** ✅ | `Base32`, `Hotp`, `Totp`, `OtpSecret`, `OtpauthUri`, `MigrationPayload` (`Clock` moved to M3, where the ticker first needs it) | All `otp-reference` vectors pass; malformed-URI tests pass; the guard confirms no Flutter imports |
-| **M2 Vault** 🔒 | `Account`, `VaultCodec`, `VaultCipher`, `SecretStore` adapter, `AccountRepository`, atomic writes, reinstall and unreadable-vault handling | Round-trip, tamper (flipped byte → failure) and migration tests; the repository is tested with a fake `SecretStore`; `toString` redaction tests |
+| **M2 Vault** 🔒 ✅ | Android backup and device-transfer exclusion (moved here from M5, because the vault first exists in M2), `Account`, `VaultCodec`, `VaultCipher`, `SecretStore` adapter, `AccountRepository`, atomic writes, reinstall and unreadable-vault handling | Round-trip, tamper (flipped byte → failure) and migration tests; the repository is tested with a fake `SecretStore`; `toString` redaction tests |
 | **M3 Accounts UI** | `Clock` interface (+ `SystemClock` in `app/`, `FakeClock` in `test/fakes/`), list, ticker, countdown, tap-to-copy with `SecureClipboard` 🔒, search, reorder, edit/delete, HOTP next | Widget tests with `FakeClock` cover boundary rollover; no pending timers; one ticker verified |
 | **M4 Add account** 🔒 | Manual form, paste URI, scanner, image import, migration-QR batches | Camera stops off-screen; the merged-manifest audit is clean (§9); invalid input shows a typed error with no echo |
-| **M5 Lock and hardening** 🔒 | `FlutterFragmentActivity` + `FLAG_SECURE`, backup exclusion, iOS overlay, PIN onboarding/unlock, biometrics, auto-lock, throttling | Both guard TODOs are gone **and converted to ERROR checks**; no code renders before unlock (widget test); throttling survives a restart |
+| **M5 Lock and hardening** 🔒 | `FlutterFragmentActivity` + `FLAG_SECURE`, iOS overlay, PIN onboarding/unlock, biometrics, auto-lock, throttling | The `FLAG_SECURE` guard TODO is gone **and converted to an ERROR check** (backup already is, since M2); no code renders before unlock (widget test); throttling survives a restart |
 | **M6 Backup** 🔒 | Export/import (§7), Argon2id benchmark and calibration, duplicate handling | Export → import round-trip; wrong password and a corrupted file give the same error; import is all-or-nothing; KDF runs off the UI isolate |
 | **M7 Release readiness** | Accessibility pass (semantics, text scaling), string centralization, app icon, release builds for both platforms, a final full-app security review | `flutter build apk` + iOS archive succeed; release-manifest audit clean; `@refine` over the whole `lib/` |
 
@@ -272,7 +273,7 @@ Every item goes through `/deliver`. The 🔒 items are **sensitive**: their plan
 
 The guard (`.claude/skills/verify/scripts/guard.dart`) grows with the milestones:
 - **M1**: fail on `DateTime.now(` anywhere under `lib/core/`.
-- **M5**: turn the `FLAG_SECURE` and backup TODOs into ERRORs.
+- **M2** ✅: the backup TODO became ERROR checks. **M5**: do the same for `FLAG_SECURE`.
 - **M4/M7**: an optional `--release` mode that inspects `build/app/intermediates/merged_manifests/` (or `aapt dump permissions` on the built APK) for network permissions.
 - When a rule here becomes binding, move it into the matching `.claude/rules/` file and delete it from this plan.
 

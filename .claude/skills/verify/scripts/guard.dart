@@ -179,11 +179,38 @@ void _checkPlatformHardening() {
     }
   }
   final manifest = _read('android/app/src/main/AndroidManifest.xml');
-  if (manifest != null &&
-      !manifest.contains('android:allowBackup="false"') &&
-      !manifest.contains('android:dataExtractionRules')) {
-    _todos.add(
-      'Android Auto Backup not disabled (allowBackup / dataExtractionRules)',
+  if (manifest != null) {
+    // The vault key never leaves the device, so backups must not carry the
+    // vault (or secure-storage prefs) to a device that cannot decrypt them.
+    if (!manifest.contains('android:allowBackup="false"')) {
+      _errors.add('AndroidManifest.xml must set android:allowBackup="false"');
+    }
+    if (!manifest.contains(
+      'android:dataExtractionRules="@xml/data_extraction_rules"',
+    )) {
+      _errors.add(
+        'AndroidManifest.xml must reference @xml/data_extraction_rules '
+        '(Android 12+ backup and device transfer)',
+      );
+    }
+    final rules = _read(
+      'android/app/src/main/res/xml/data_extraction_rules.xml',
     );
+    for (final section in const ['cloud-backup', 'device-transfer']) {
+      final body = RegExp(
+        '<$section[^>]*>(.*?)</$section>',
+        dotAll: true,
+      ).firstMatch(rules ?? '')?.group(1);
+      for (final domain in const ['root', 'file', 'database', 'sharedpref']) {
+        if (body == null ||
+            !RegExp('<exclude domain="$domain" path="\\." */>')
+                .hasMatch(body)) {
+          _errors.add(
+            'data_extraction_rules.xml must exclude domain "$domain" '
+            'from $section',
+          );
+        }
+      }
+    }
   }
 }
