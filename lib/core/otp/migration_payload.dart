@@ -56,6 +56,10 @@ abstract final class MigrationPayload {
   static const int maxInputLength = 64 * 1024;
   static const int maxAccounts = 1000;
 
+  /// Bound on the number of QR codes in one export. The batch size comes
+  /// from untrusted input; real exports need a handful of codes.
+  static const int maxBatchSize = 100;
+
   static MigrationParseResult parse(String input) {
     final text = input.trim();
     if (text.length > maxInputLength) return _fail(MigrationError.tooLarge);
@@ -123,7 +127,10 @@ abstract final class MigrationPayload {
       }
     }
 
-    if (batchSize < 1 || batchIndex < 0 || batchIndex >= batchSize) {
+    if (batchSize < 1 ||
+        batchSize > maxBatchSize ||
+        batchIndex < 0 ||
+        batchIndex >= batchSize) {
       throw const FormatException('invalid batch fields');
     }
     return MigrationParsed(

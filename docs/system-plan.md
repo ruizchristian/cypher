@@ -219,7 +219,7 @@ background > timeout ─▶ repository.lock() + privacy overlay ─▶ Unlock on
 - `MainActivity` extends **`FlutterFragmentActivity`** (required by `local_auth`) and sets `FLAG_SECURE` in `onCreate`. This clears the guard TODO.
 - Manifest: `android:allowBackup="false"` plus `dataExtractionRules` that exclude everything (this clears the guard TODO), `CAMERA`, `USE_BIOMETRIC`.
 - Sensitive clipboard (API 33+) and `FLAG_SECURE` go through a small `MethodChannel` (`cypher/platform`).
-- **Merged-manifest risk:** plugins can inject permissions. `mobile_scanner` relies on Google ML Kit, whose transitive data-transport/logging libraries may merge `INTERNET`. In M4: build a release APK, inspect the merged manifest, and if `INTERNET` or `ACCESS_NETWORK_STATE` appears, remove it with `tools:node="remove"` in the main manifest and confirm scanning still works. If ML Kit misbehaves offline, evaluate a ZXing-based scanner instead.
+- **Merged-manifest risk (resolved in M4):** a trial build showed `mobile_scanner` pulls in Google ML Kit, whose `com.google.android.datatransport` usage-logging library adds `INTERNET` and `ACCESS_NETWORK_STATE`. Cypher uses **`flutter_zxing`** (zxing-cpp over FFI, plus the Flutter team's `camera` plugin) instead: no ML Kit, Firebase or Play Services. The camera plugin's unused video, audio and storage permissions (and media3's `ACCESS_NETWORK_STATE`) are stripped with `tools:node="remove"`, and the guard audits the merged release manifest against an allowlist.
 
 **iOS**
 - `NSCameraUsageDescription` and `NSFaceIDUsageDescription` in `Info.plist`.
@@ -239,8 +239,8 @@ background > timeout ─▶ repository.lock() + privacy overlay ─▶ Unlock on
 | `cryptography` | Argon2id, AES-GCM | M2 | Pure Dart |
 | `flutter_secure_storage` | DEK, PIN hash | M2 | Platform keystore only |
 | `path_provider` | Vault file location | M2 | Flutter team |
-| `mobile_scanner` | QR scanning, image analysis | M4 | **Audit the merged manifest** (§9) |
-| `image_picker` | Image import | M4 | Flutter team. Check permissions merged |
+| `flutter_zxing` **3.1.0 (pinned)** | QR scanning and image decoding (zxing-cpp over FFI) | M4 | No network; chosen over `mobile_scanner` (ML Kit telemetry). Unverified individual publisher, so the version is pinned and the library sits behind `QrScannerBuilder` / `QrImageReader`, swappable via one file |
+| `image_picker` | Choose an image to decode | M4 | Flutter team. Merges no permissions on Android 13+ (system photo picker) |
 | `file_selector` | Export/import file picking | M6 | Flutter team |
 | `local_auth` | Biometrics | M5 | Platform only |
 
@@ -258,10 +258,10 @@ Every item goes through `/deliver`. The 🔒 items are **sensitive**: their plan
 | **M1 OTP core** ✅ | `Base32`, `Hotp`, `Totp`, `OtpSecret`, `OtpauthUri`, `MigrationPayload` (`Clock` moved to M3, where the ticker first needs it) | All `otp-reference` vectors pass; malformed-URI tests pass; the guard confirms no Flutter imports |
 | **M2 Vault** 🔒 ✅ | Android backup and device-transfer exclusion (moved here from M5, because the vault first exists in M2), `Account`, `VaultCodec`, `VaultCipher`, `SecretStore` adapter, `AccountRepository`, atomic writes, reinstall and unreadable-vault handling | Round-trip, tamper (flipped byte → failure) and migration tests; the repository is tested with a fake `SecretStore`; `toString` redaction tests |
 | **M3 Accounts UI** ✅ | `Clock` interface (+ `SystemClock` in `app/`, `FakeClock` in `test/fakes/`), list, ticker, countdown, tap-to-copy with `SecureClipboard` 🔒, search, reorder, edit/delete, HOTP next | Widget tests with `FakeClock` cover boundary rollover; no pending timers; one ticker verified |
-| **M4 Add account** 🔒 | Manual form, paste URI, scanner, image import, migration-QR batches | Camera stops off-screen; the merged-manifest audit is clean (§9); invalid input shows a typed error with no echo |
+| **M4 Add account** 🔒 ✅ | Manual form, paste URI, scanner, image import, migration-QR batches | Camera stops off-screen; the merged-manifest audit is clean (§9); invalid input shows a typed error with no echo |
 | **M5 Lock and hardening** 🔒 | `FlutterFragmentActivity` + `FLAG_SECURE`, iOS overlay, PIN onboarding/unlock, biometrics, auto-lock, throttling | The `FLAG_SECURE` guard TODO is gone **and converted to an ERROR check** (backup already is, since M2); no code renders before unlock (widget test); throttling survives a restart |
 | **M6 Backup** 🔒 | Export/import (§7), Argon2id benchmark and calibration, duplicate handling | Export → import round-trip; wrong password and a corrupted file give the same error; import is all-or-nothing; KDF runs off the UI isolate |
-| **M7 Release readiness** | Accessibility pass (semantics, text scaling), string centralization, app icon, release builds for both platforms, a final full-app security review | `flutter build apk` + iOS archive succeed; release-manifest audit clean; `@refine` over the whole `lib/` |
+| **M7 Release readiness** | Accessibility pass (semantics, text scaling), string centralization, release builds (app icon done early, in M4) for both platforms, a final full-app security review | `flutter build apk` + iOS archive succeed; release-manifest audit clean; `@refine` over the whole `lib/` |
 
 **After v1:**
 - **v2 (decided): auth-bound keys** (§6.1). This is a 🔒 milestone: native Kotlin/Swift key code, a v1→v2 DEK migration, and invalidation and re-enrolment flows.
@@ -283,7 +283,7 @@ The guard (`.claude/skills/verify/scripts/guard.dart`) grows with the milestones
 
 | Risk | Impact | Mitigation |
 |---|---|---|
-| A plugin merges `INTERNET` (ML Kit) | Breaks the offline guarantee | Merged-manifest audit, `tools:node="remove"`, alternative scanner (§9) |
+| A plugin merges a network permission | Breaks the offline guarantee | Release-manifest allowlist audit in the guard (M4), `tools:node="remove"`; ML Kit avoided entirely (§9) |
 | Keystore key invalidated or lost | Vault unreadable, accounts lost | Unreadable-vault screen, keep the old file, prominent export reminder after adding accounts |
 | Argon2id too slow on low-end Android | Export/import feels stuck | Isolate + progress UI, calibrated params stored in the header, optional `cryptography_flutter` |
 | HOTP counter desync | Codes rejected by the service | Persist before display, a manual counter edit in `account_edit` |

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/account.dart';
 import '../../data/account_repository.dart';
+import '../add_account/add_account_sheet.dart';
 import '../shared/providers.dart';
 import 'account_tile.dart';
 import 'accounts_strings.dart';
@@ -58,6 +59,13 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
     final accounts = state is VaultUnlocked ? state.accounts : null;
 
     return Scaffold(
+      floatingActionButton: accounts == null
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => showAddAccountSheet(context),
+              icon: const Icon(Icons.add),
+              label: const Text(AccountsStrings.addAccount),
+            ),
       appBar: AppBar(
         title: _searching
             ? TextField(

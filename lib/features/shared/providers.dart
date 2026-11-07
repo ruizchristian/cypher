@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/clock.dart';
 import '../../core/security/secure_clipboard.dart';
 import '../../data/account_repository.dart';
+import 'qr_input.dart';
 
 // Injected dependencies. They have no defaults on purpose: `main.dart` wires
 // the real implementations and tests override them with fakes, so nothing
@@ -60,3 +61,14 @@ final tickProvider = StreamProvider.autoDispose<DateTime>((ref) {
   });
   return controller.stream;
 });
+
+/// The live QR scanner (ZXing in the app, a fake in tests).
+final qrScannerBuilderProvider = Provider<QrScannerBuilder>(
+  (ref) =>
+      throw UnimplementedError('qrScannerBuilderProvider must be overridden'),
+);
+
+/// Reads a QR code from a picked image (ZXing in the app, a fake in tests).
+final qrImageReaderProvider = Provider<QrImageReader>(
+  (ref) => throw UnimplementedError('qrImageReaderProvider must be overridden'),
+);

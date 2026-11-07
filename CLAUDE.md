@@ -34,12 +34,12 @@ Cypher is a cross-platform **two-factor authenticator app** built with Flutter. 
 ## Tech stack
 
 - Flutter (stable) / Dart 3.x. It targets **Android and iOS only**: no desktop or web, and Android `minSdk` is 30.
-- Suggested packages (all offline): `flutter_secure_storage`, `local_auth`, `mobile_scanner`, `crypto` / `cryptography`, a state management solution (e.g. `flutter_riverpod`).
+- Suggested packages (all offline): `flutter_secure_storage`, `local_auth`, `flutter_zxing` (QR; not `mobile_scanner`, whose ML Kit bundles Google telemetry), `crypto` / `cryptography`, a state management solution (e.g. `flutter_riverpod`).
 - Implement OTP generation in-house in pure Dart (HMAC per RFC 4226/6238) so it is fully testable and dependency-light.
 
 ## Current state
 
-M0–M3 are done (foundations, OTP core, vault, accounts UI). `main.dart` opens the vault, then runs `ProviderScope` → `CypherApp`, with the injected dependencies (clock, repository, clipboard) overridden; their providers live in `lib/features/shared/providers.dart` and have no defaults. **Until M5 there is no lock screen: `AccountsScreen` unlocks the vault itself, so the app must not be released before M5.** `lib/core/otp/` holds Base32, HOTP/TOTP and the `otpauth://` / `otpauth-migration://` parsers (RFC-verified). `lib/data/account_repository.dart` owns accounts in an AES-GCM vault whose key is in Keystore/Keychain (`lib/app/vault_bootstrap.dart` wires the real adapters). On-device tests live in `integration_test/`; run them with `flutter test integration_test -d <device>`. Next is M4 (adding accounts). Android package / application ID: `com.cypher.cypher`. The Dart SDK constraint is `^3.13.5`. Lints come from `flutter_lints` (`analysis_options.yaml`), which excludes `android/` and `ios/`.
+M0–M4 are done (foundations, OTP core, vault, accounts UI, adding accounts). `main.dart` opens the vault, then runs `ProviderScope` → `CypherApp`, with the injected dependencies (clock, repository, clipboard) overridden; their providers live in `lib/features/shared/providers.dart` and have no defaults. **Until M5 there is no lock screen: `AccountsScreen` unlocks the vault itself, so the app must not be released before M5.** `lib/core/otp/` holds Base32, HOTP/TOTP and the `otpauth://` / `otpauth-migration://` parsers (RFC-verified). `lib/data/account_repository.dart` owns accounts in an AES-GCM vault whose key is in Keystore/Keychain (`lib/app/vault_bootstrap.dart` wires the real adapters). On-device tests live in `integration_test/`; run them with `flutter test integration_test -d <device>`. Next is M5 (lock screen and hardening). Android package / application ID: `com.cypher.cypher`. The Dart SDK constraint is `^3.13.5`. Lints come from `flutter_lints` (`analysis_options.yaml`), which excludes `android/` and `ios/`.
 
 ## Suggested structure
 
@@ -66,8 +66,10 @@ flutter test test/path/to_test.dart                 # run one test file
 flutter test --plain-name "substring of test name"  # run matching tests
 flutter analyze        # static analysis
 dart format .          # format
-flutter build apk      # Android release build
+flutter build apk      # Android release build (then run the guard: it audits the release permissions)
 ```
+
+App icon: artwork in `assets/icon/`; regenerate all Android/iOS sizes with the standalone generator in `tool/app_icon/` (see its README).
 
 Pure-Dart tests (under `core/`, no Flutter imports) can also run with `dart test`, but only once `package:test` is added as a dev dependency.
 
@@ -82,5 +84,5 @@ Pure-Dart tests (under `core/`, no Flutter imports) can also run with `dart test
 - `rules/` are path-scoped (`paths:` frontmatter) and load only when matching files are in play: `architecture`, `coding-standards`, `security`, `performance` and `testing` for `lib/`/`test/`, and `dependencies` for `pubspec.*`. They hold the *how*; this file holds the *what*. Don't duplicate between them. When a pending decision is made (e.g. state management), update the relevant rule.
 - Project skills: `/deliver <task>` (the analyze → plan → implement → review → verify workflow, user-invoked only), `/verify` (the verification gate), and `otp-reference` (RFC vectors and the otpauth URI spec, auto-loaded when OTP code is involved).
 - Agent: `@refine` (`agents/refine.md`) does cleanup that keeps behaviour unchanged on a named file, folder or recent change. It writes tests that pin down current behaviour if none exist, and finishes with the full verification gate.
-- The guard script (`.claude/skills/verify/scripts/guard.dart`) uses only `dart:io`. Add a check there whenever a new rule can be checked mechanically. `ERROR` fails the gate; `TODO` tracks required protections not yet built (currently `FLAG_SECURE` and disabling Android Auto Backup).
+- The guard script (`.claude/skills/verify/scripts/guard.dart`) uses only `dart:io`. Add a check there whenever a new rule can be checked mechanically. `ERROR` fails the gate; `TODO` tracks required protections not yet built (currently `FLAG_SECURE`). It also audits the merged manifest of the last `flutter build apk --release` against a permission allowlist (CAMERA only), so rebuild release after changing dependencies.
 - Third-party skills from `emilkowalski/skill` were installed with `npx skills add` and are tracked in `skills-lock.json`. Most target web, React or Swift: apply their design principles to Flutter and ignore their CSS/JS specifics. Update them with `npx skills update -p`.

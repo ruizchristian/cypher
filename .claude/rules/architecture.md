@@ -24,7 +24,7 @@ paths:
 - Time is injected (a clock interface or `DateTime Function()`). `core/` never calls `DateTime.now()` directly.
 - Models are immutable (`final` fields, `copyWith`). The secret is a `Uint8List` or a dedicated value type whose `toString()` is redacted, never a plain `String` field that ends up in generated `toString`/`==` output.
 - Every persisted or exported structure carries a schema/format version, and readers handle older versions.
-- One feature must not import another feature's internals. Shared widgets go in `features/shared/` (or `app/` for app-wide chrome).
+- One feature must not import another feature's internals. A feature may import another feature's single entry point (e.g. `accounts` calls `showAddAccountSheet` from `add_account/add_account_sheet.dart`). Shared widgets and cross-feature interfaces go in `features/shared/` (or `app/` for app-wide chrome).
 
 ## Recorded decisions (details in `docs/system-plan.md` §3)
 

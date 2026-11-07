@@ -162,15 +162,21 @@ final class AccountRepository {
     });
   }
 
-  Future<Account> add(OtpParameters parameters) => _serialized(() async {
-    final account = Account.fromParameters(
-      parameters,
-      id: Account.newId(),
-      createdAt: _now().toUtc(),
-    );
-    await _save([..._requireUnlocked().accounts, account]);
-    return account;
-  });
+  Future<Account> add(OtpParameters parameters) async =>
+      (await addAll([parameters])).single;
+
+  /// Adds every account in one write: either all are saved or none are.
+  Future<List<Account>> addAll(List<OtpParameters> parameters) => _serialized(
+    () async {
+      final createdAt = _now().toUtc();
+      final added = [
+        for (final p in parameters)
+          Account.fromParameters(p, id: Account.newId(), createdAt: createdAt),
+      ];
+      await _save([..._requireUnlocked().accounts, ...added]);
+      return added;
+    },
+  );
 
   Future<Account> rename(String id, {String? issuer, String? accountName}) =>
       _serialized(() async {

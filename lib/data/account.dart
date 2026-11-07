@@ -81,8 +81,31 @@ final class Account {
     return buffer.toString();
   }
 
+  /// Whether [parameters] describe this same account: same secret (compared
+  /// in constant time), issuer and account name. Used to skip duplicates on
+  /// import.
+  bool isSameAs(OtpParameters parameters) =>
+      _isSameAccount(secret, issuer, accountName, parameters);
+
   @override
   String toString() =>
       'Account(id: $id, type: ${type.name}, issuer: $issuer, '
       'accountName: $accountName, secret: <redacted>)';
 }
+
+/// Duplicate detection for accounts that are not stored yet, such as two
+/// entries in one import. Same rule as [Account.isSameAs].
+extension OtpParametersDuplicates on OtpParameters {
+  bool isSameAs(OtpParameters other) =>
+      _isSameAccount(secret, issuer, accountName, other);
+}
+
+bool _isSameAccount(
+  OtpSecret secret,
+  String issuer,
+  String accountName,
+  OtpParameters other,
+) =>
+    secret == other.secret &&
+    issuer == other.issuer &&
+    accountName == other.accountName;

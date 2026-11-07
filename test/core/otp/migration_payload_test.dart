@@ -231,6 +231,27 @@ void main() {
       }
     });
 
+    test('rejects a batch size above the cap', () {
+      expect(
+        _error(
+          _uri(
+            _payload([
+              _account(),
+            ], batchSize: MigrationPayload.maxBatchSize + 1),
+          ),
+        ),
+        MigrationError.malformed,
+      );
+      expect(
+        _ok(
+          _uri(
+            _payload([_account()], batchSize: MigrationPayload.maxBatchSize),
+          ),
+        ).batchSize,
+        MigrationPayload.maxBatchSize,
+      );
+    });
+
     test('rejects inconsistent batch fields', () {
       expect(
         _error(_uri(_payload([_account()], batchSize: 2, batchIndex: 2))),

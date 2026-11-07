@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:cypher/core/otp/base32.dart';
+import 'package:cypher/core/otp/otp_parameters.dart';
 import 'package:cypher/core/otp/otp_secret.dart';
 import 'package:cypher/core/otp/otp_types.dart';
 import 'package:cypher/data/account.dart';
@@ -40,5 +41,34 @@ void main() {
     for (final id in ids) {
       expect(id, matches(RegExp(r'^[0-9a-f]{32}$')));
     }
+  });
+
+  group('isSameAs', () {
+    // Type and code parameters do not take part in duplicate detection.
+    OtpParameters params({
+      List<int>? secret,
+      String issuer = 'Example',
+      String accountName = 'alice',
+    }) => OtpParameters(
+      type: OtpType.totp,
+      secret: OtpSecret(secret ?? secretBytes),
+      issuer: issuer,
+      accountName: accountName,
+      digits: 8,
+    );
+
+    test('an account matches on secret, issuer and account name', () {
+      expect(account.isSameAs(params()), isTrue);
+      expect(account.isSameAs(params(secret: [1, 2, 3])), isFalse);
+      expect(account.isSameAs(params(issuer: 'Other')), isFalse);
+      expect(account.isSameAs(params(accountName: 'bob')), isFalse);
+    });
+
+    test('parameters compare by the same rule', () {
+      expect(params().isSameAs(params()), isTrue);
+      expect(params().isSameAs(params(secret: [1, 2, 3])), isFalse);
+      expect(params().isSameAs(params(issuer: 'Other')), isFalse);
+      expect(params().isSameAs(params(accountName: 'bob')), isFalse);
+    });
   });
 }

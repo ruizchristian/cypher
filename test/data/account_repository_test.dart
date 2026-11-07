@@ -208,6 +208,25 @@ void main() {
       expect(await persistedNames(), ['alice']);
     });
 
+    test('addAll appends every account in order with distinct ids', () async {
+      await repo.add(_totp('first'));
+      final added = await repo.addAll([_totp('a'), _hotp('b'), _totp('c')]);
+      expect(added.map((a) => a.accountName), ['a', 'b', 'c']);
+      expect(added.map((a) => a.id).toSet(), hasLength(3));
+      expect(await persistedNames(), ['first', 'a', 'b', 'c']);
+    });
+
+    test('a failed addAll saves none of the accounts', () async {
+      await repo.add(_totp('kept'));
+      files.failNextWrite = const FileSystemException('disk full');
+      await expectLater(
+        repo.addAll([_totp('a'), _totp('b')]),
+        throwsA(isA<FileSystemException>()),
+      );
+      expect(repo.accounts.map((a) => a.accountName), ['kept']);
+      expect(await persistedNames(), ['kept']);
+    });
+
     test('rename changes only the names', () async {
       final a = await repo.add(_totp('alice'));
       final renamed = await repo.rename(

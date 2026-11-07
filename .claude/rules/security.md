@@ -44,5 +44,5 @@ paths:
 
 ## Network
 
-- No network permission or entitlement outside the debug and profile variants. The guard script checks the release Android manifest.
+- No network permission or entitlement outside the debug and profile variants. Plugins can merge permissions in silently, so the main manifest strips unused ones with `tools:node="remove"`, and the guard checks both the source manifest and the merged manifest of the last release build (allowlist: `CAMERA`). Rebuild release after any dependency change.
 - Camera permission (scanner) is the only runtime permission the app should need. Give it a clear iOS `NSCameraUsageDescription`.

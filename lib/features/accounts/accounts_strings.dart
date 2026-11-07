@@ -3,7 +3,8 @@
 abstract final class AccountsStrings {
   static const String screenTitle = 'Cypher';
   static const String emptyTitle = 'No accounts yet';
-  static const String emptyBody = 'Accounts you add will appear here.';
+  static const String emptyBody = 'Tap "Add account" to set up your first one.';
+  static const String addAccount = 'Add account';
   static const String noMatches = 'No matching accounts';
   static const String searchHint = 'Search accounts';
   static const String search = 'Search';

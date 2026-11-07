@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../fakes/fake_clock.dart';
+import '../fakes/fake_qr_input.dart';
 import '../fakes/fake_secure_clipboard.dart';
 import '../fakes/in_memory_secret_store.dart';
 import '../fakes/in_memory_vault_file_store.dart';
@@ -42,6 +43,8 @@ final class AppHarness {
 
   final FakeClock clock;
   final FakeSecureClipboard clipboard = FakeSecureClipboard();
+  final FakeQrScanner scanner = FakeQrScanner();
+  final FakeQrImageReader imageReader = FakeQrImageReader();
   final InMemorySecretStore secrets = InMemorySecretStore();
   final InMemoryVaultFileStore files = InMemoryVaultFileStore();
 
@@ -68,6 +71,8 @@ final class AppHarness {
           clockProvider.overrideWithValue(clock),
           accountRepositoryProvider.overrideWithValue(repository),
           secureClipboardProvider.overrideWithValue(clipboard),
+          qrScannerBuilderProvider.overrideWithValue(scanner.build),
+          qrImageReaderProvider.overrideWithValue(imageReader),
         ],
         child: const CypherApp(),
       ),

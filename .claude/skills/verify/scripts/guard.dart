@@ -20,6 +20,7 @@ void main() {
   }
 
   _checkAndroidManifest();
+  _checkReleaseManifest();
   _checkDependencies();
   _checkPureDartCore();
   _checkLogging();
@@ -56,14 +57,80 @@ void _checkAndroidManifest() {
     _warnings.add('$manifest not found');
     return;
   }
-  for (final permission in const [
-    'android.permission.INTERNET',
-    'android.permission.ACCESS_NETWORK_STATE',
-    'android.permission.ACCESS_WIFI_STATE',
-  ]) {
-    if (text.contains(permission)) {
+  // `tools:node="remove"` entries strip a permission that a plugin merges
+  // in; they are the opposite of a request, so they are skipped here.
+  for (final permission in _requestedPermissions(text)) {
+    if (const {
+      'android.permission.INTERNET',
+      'android.permission.ACCESS_NETWORK_STATE',
+      'android.permission.ACCESS_WIFI_STATE',
+    }.contains(permission)) {
       _errors.add('$manifest declares $permission (release must be offline)');
     }
+  }
+}
+
+/// Permissions requested by `<uses-permission>` elements, ignoring ones
+/// marked `tools:node="remove"`.
+Iterable<String> _requestedPermissions(String manifest) sync* {
+  final element = RegExp(r'<uses-permission\b[^>]*>', dotAll: true);
+  final name = RegExp(r'android:name="([^"]+)"');
+  for (final match in element.allMatches(manifest)) {
+    final tag = match.group(0)!;
+    if (tag.contains('tools:node="remove"')) continue;
+    final permission = name.firstMatch(tag)?.group(1);
+    if (permission != null) yield permission;
+  }
+}
+
+/// Audits the merged manifest of the last release build: plugins can add
+/// permissions that never appear in our own manifest (M4: camera plugins
+/// pulled in audio, storage and network-state permissions).
+void _checkReleaseManifest() {
+  const allowed = {'android.permission.CAMERA'};
+  const internalSuffix = '.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION';
+
+  final dir = Directory(
+    _path('build/app/intermediates/merged_manifest/release'),
+  );
+  final manifests = dir.existsSync()
+      ? dir
+            .listSync(recursive: true)
+            .whereType<File>()
+            .where((f) => f.path.endsWith('AndroidManifest.xml'))
+            .toList()
+      : <File>[];
+  if (manifests.isEmpty) {
+    _warnings.add(
+      'no release build to audit; run `flutter build apk --release`, then '
+      're-run the guard',
+    );
+    return;
+  }
+  final merged = manifests.first;
+  final builtAt = merged.lastModifiedSync();
+  for (final input in const [
+    'pubspec.lock',
+    'android/app/src/main/AndroidManifest.xml',
+  ]) {
+    final file = File(_path(input));
+    if (file.existsSync() && file.lastModifiedSync().isAfter(builtAt)) {
+      _warnings.add(
+        'release build is older than $input; rebuild with '
+        '`flutter build apk --release` to audit the current permissions',
+      );
+      break;
+    }
+  }
+  for (final permission in _requestedPermissions(merged.readAsStringSync())) {
+    if (allowed.contains(permission) || permission.endsWith(internalSuffix)) {
+      continue;
+    }
+    _errors.add(
+      'release build requests $permission (merged from a dependency); '
+      'remove it with tools:node="remove" in AndroidManifest.xml or drop '
+      'the dependency',
+    );
   }
 }
 
