@@ -8,6 +8,7 @@ import '../backup/export_backup_screen.dart';
 import '../settings/settings_screen.dart';
 import '../shared/app_logo.dart';
 import '../shared/providers.dart';
+import '../update/update.dart';
 import 'account_tile.dart';
 import 'accounts_strings.dart';
 import 'vault_unreadable_view.dart';
@@ -104,24 +105,32 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
       ),
       body: switch (state) {
         VaultUnreadable(:final reason) => VaultUnreadableView(reason: reason),
-        VaultUnlocked(:final accounts) when accounts.isEmpty => const _Message(
-          logo: true,
-          icon: Icons.shield_outlined,
-          title: AccountsStrings.emptyTitle,
-          body: AccountsStrings.emptyBody,
-        ),
+        // The update card shows with or without accounts; the backup
+        // reminder only once there is something to back up.
         VaultUnlocked(:final accounts) => Column(
           children: [
-            if (_showBackupReminder)
-              _BackupReminder(
-                onLater: () => setState(() => _reminderHidden = true),
+            const UpdateBanner(),
+            if (accounts.isEmpty)
+              const Expanded(
+                child: _Message(
+                  logo: true,
+                  icon: Icons.shield_outlined,
+                  title: AccountsStrings.emptyTitle,
+                  body: AccountsStrings.emptyBody,
+                ),
+              )
+            else ...[
+              if (_showBackupReminder)
+                _BackupReminder(
+                  onLater: () => setState(() => _reminderHidden = true),
+                ),
+              Expanded(
+                child: _AccountList(
+                  accounts: accounts,
+                  query: _searching ? _search.text.trim() : '',
+                ),
               ),
-            Expanded(
-              child: _AccountList(
-                accounts: accounts,
-                query: _searching ? _search.text.trim() : '',
-              ),
-            ),
+            ],
           ],
         ),
         VaultLocked() ||

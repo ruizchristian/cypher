@@ -24,6 +24,7 @@ void main() {
   _checkDependencies();
   _checkPureDartCore();
   _checkLogging();
+  _checkNetworkCode();
   _checkPlatformHardening();
 
   for (final e in _errors) {
@@ -59,13 +60,17 @@ void _checkAndroidManifest() {
   }
   // `tools:node="remove"` entries strip a permission that a plugin merges
   // in; they are the opposite of a request, so they are skipped here.
+  // INTERNET is allowed for the in-app updater alone; _checkNetworkCode keeps
+  // every other file off the network.
   for (final permission in _requestedPermissions(text)) {
     if (const {
-      'android.permission.INTERNET',
       'android.permission.ACCESS_NETWORK_STATE',
       'android.permission.ACCESS_WIFI_STATE',
     }.contains(permission)) {
-      _errors.add('$manifest declares $permission (release must be offline)');
+      _errors.add(
+        '$manifest declares $permission (the updater needs no '
+        'network-state access)',
+      );
     }
   }
 }
@@ -90,6 +95,8 @@ void _checkReleaseManifest() {
   const allowed = {
     'android.permission.CAMERA', // QR scanning (M4)
     'android.permission.USE_BIOMETRIC', // biometric unlock (M5)
+    'android.permission.INTERNET', // in-app updates only (see _checkNetworkCode)
+    'android.permission.REQUEST_INSTALL_PACKAGES', // installing an update
   };
   const internalSuffix = '.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION';
 
@@ -298,5 +305,33 @@ void _checkPlatformHardening() {
         }
       }
     }
+  }
+}
+
+/// The app has INTERNET for the in-app updater only. Network code anywhere
+/// else (another file, a new HTTP package) fails the gate, so the permission
+/// can never quietly start carrying anything but update checks.
+void _checkNetworkCode() {
+  const allowedFile = 'lib/features/update/update_source.dart';
+  final network = RegExp(
+    r'\b(HttpClient|HttpServer|HttpRequest|WebSocket|RawSocket|'
+    r'SecureSocket|Socket|RawDatagramSocket|InternetAddress)\b|'
+    r'''package:(http|dio|web_socket_channel)/''',
+  );
+  for (final file in _dartFiles('lib')) {
+    if (_rel(file) == allowedFile) continue;
+    final lines = file.readAsLinesSync();
+    for (var i = 0; i < lines.length; i++) {
+      if (lines[i].trimLeft().startsWith('//')) continue;
+      if (network.hasMatch(lines[i])) {
+        _errors.add(
+          '${_rel(file)}:${i + 1} uses the network; only $allowedFile '
+          '(the in-app updater) may',
+        );
+      }
+    }
+  }
+  if (!File(_path(allowedFile)).existsSync()) {
+    _warnings.add('$allowedFile not found; update the guard if it moved');
   }
 }

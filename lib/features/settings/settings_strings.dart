@@ -13,6 +13,7 @@ abstract final class SettingsStrings {
   static const String backup = 'Backup';
   static const String exportBackup = 'Export backup';
   static const String importBackup = 'Import backup';
+  static const String updates = 'Updates';
   static const String exportUnavailable =
       "Exporting isn't available on this device yet.";
   static String lastBackup(DateTime? at) {

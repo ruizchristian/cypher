@@ -4,16 +4,21 @@ import android.content.ClipData
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.PersistableBundle
 import android.provider.DocumentsContract
+import android.provider.Settings
 import android.view.WindowManager
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.FileProvider
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.io.File
 
 // FlutterFragmentActivity is required by local_auth (biometric prompt).
 class MainActivity : FlutterFragmentActivity() {
@@ -75,6 +80,58 @@ class MainActivity : FlutterFragmentActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+        // In-app updates (lib/features/update/update_platform.dart). Downloading
+        // happens in Dart; this covers what Dart cannot do: read the
+        // versionCode and open the package installer.
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, UPDATES_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "installedVersion" -> {
+                        val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            packageManager.getPackageInfo(
+                                packageName,
+                                PackageManager.PackageInfoFlags.of(0),
+                            )
+                        } else {
+                            @Suppress("DEPRECATION")
+                            packageManager.getPackageInfo(packageName, 0)
+                        }
+                        result.success(
+                            mapOf("version" to info.versionName, "build" to info.longVersionCode),
+                        )
+                    }
+                    "cacheDirectory" -> result.success(cacheDir.absolutePath)
+                    "canInstall" -> result.success(packageManager.canRequestPackageInstalls())
+                    "openInstallSettings" -> {
+                        startActivity(
+                            Intent(
+                                Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                                Uri.parse("package:$packageName"),
+                            ),
+                        )
+                        result.success(null)
+                    }
+                    "install" -> result.success(install(call.argument<String>("path")))
+                    else -> result.notImplemented()
+                }
+            }
+    }
+
+    /** Opens the system installer on a downloaded APK; Android asks the user to confirm. */
+    private fun install(path: String?): Boolean {
+        if (path == null) return false
+        return try {
+            val uri = FileProvider.getUriForFile(this, "$packageName.updates", File(path))
+            startActivity(
+                Intent(Intent.ACTION_VIEW)
+                    .setDataAndType(uri, "application/vnd.android.package-archive")
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
+            )
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 
     /**
@@ -164,5 +221,6 @@ class MainActivity : FlutterFragmentActivity() {
 
     private companion object {
         const val CHANNEL = "cypher/platform"
+        const val UPDATES_CHANNEL = "cypher/updates"
     }
 }

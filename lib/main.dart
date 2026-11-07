@@ -12,6 +12,7 @@ import 'data/lock_service.dart';
 import 'features/add_account/zxing_qr_input.dart';
 import 'features/backup/platform_backup_files.dart';
 import 'features/shared/providers.dart';
+import 'features/update/update.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,6 +31,13 @@ Future<void> main() async {
     now: clock.now,
   );
   await backup.initialize();
+  // Not awaited: the first check needs the network and must not hold up
+  // the lock screen.
+  final updates = UpdateController(
+    source: const GitHubUpdateSource(),
+    platform: const AndroidUpdatePlatform(),
+    now: clock.now,
+  )..init();
   runApp(
     ProviderScope(
       overrides: [
@@ -41,6 +49,7 @@ Future<void> main() async {
         secureClipboardProvider.overrideWithValue(FlutterSecureClipboard()),
         qrScannerBuilderProvider.overrideWithValue(zxingScanner),
         qrImageReaderProvider.overrideWithValue(ZxingQrImageReader()),
+        updateControllerProvider.overrideWithValue(updates),
       ],
       child: const CypherApp(),
     ),

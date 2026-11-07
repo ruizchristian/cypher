@@ -11,6 +11,7 @@ import 'package:cypher/data/account_repository.dart';
 import 'package:cypher/data/backup_service.dart';
 import 'package:cypher/data/lock_service.dart';
 import 'package:cypher/features/shared/providers.dart';
+import 'package:cypher/features/update/update_controller.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -20,6 +21,7 @@ import '../fakes/fake_biometrics.dart';
 import '../fakes/fake_clock.dart';
 import '../fakes/fake_qr_input.dart';
 import '../fakes/fake_secure_clipboard.dart';
+import '../fakes/fake_updates.dart';
 import '../fakes/in_memory_secret_store.dart';
 import '../fakes/in_memory_vault_file_store.dart';
 
@@ -76,6 +78,13 @@ final class AppHarness {
   final FakeQrImageReader imageReader = FakeQrImageReader();
   final InMemorySecretStore secrets = InMemorySecretStore();
   final InMemoryVaultFileStore files = InMemoryVaultFileStore();
+  final FakeUpdateSource updateSource = FakeUpdateSource();
+
+  /// Unsupported (like a debug build) unless a test sets a version and
+  /// starts the controller itself.
+  final FakeUpdatePlatform updatePlatform = FakeUpdatePlatform(null)
+    ..version = null;
+  late UpdateController updates;
 
   AccountRepository newRepository() =>
       AccountRepository(keys: StoredKeyWrapper(secrets), files: files);
@@ -134,6 +143,12 @@ final class AppHarness {
       inIsolate: false,
     );
     await backup.initialize();
+    updates = UpdateController(
+      source: updateSource,
+      platform: updatePlatform,
+      now: clock.now,
+    );
+    await tester.runAsync(updates.init);
     if (start == LockStart.unlocked) {
       final result = await lock.unlockWithPin(testPin);
       expect(result, isA<PinAccepted>());
@@ -149,6 +164,7 @@ final class AppHarness {
           secureClipboardProvider.overrideWithValue(clipboard),
           qrScannerBuilderProvider.overrideWithValue(scanner.build),
           qrImageReaderProvider.overrideWithValue(imageReader),
+          updateControllerProvider.overrideWithValue(updates),
         ],
         child: const CypherApp(),
       ),
@@ -162,6 +178,7 @@ final class AppHarness {
   /// is left pending when the test ends.
   Future<void> unmount(WidgetTester tester) async {
     await tester.pumpWidget(const SizedBox());
+    updates.dispose();
     await tester.pump();
   }
 

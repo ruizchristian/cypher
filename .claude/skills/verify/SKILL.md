@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Run Cypher's full verification gate — format check, flutter analyze, flutter test, and the offline/security guard (no release network permissions, no telemetry packages, pure-Dart OTP core, no print calls). Use before reporting any code change as done, or when asked to check, validate or lint the project.
+description: Run Cypher's full verification gate — format check, flutter analyze, flutter test, and the offline/security guard (network code only in the updater, release permissions allowlisted, no telemetry packages, pure-Dart OTP core, no print calls). Use before reporting any code change as done, or when asked to check, validate or lint the project.
 allowed-tools: Bash(dart format:*), Bash(flutter analyze:*), Bash(flutter test:*), Bash(dart .claude/skills/verify/scripts/guard.dart:*)
 ---
 
@@ -15,12 +15,13 @@ Run from the repo root, in this order. Report every step's actual result.
 
 ## What the guard checks
 
-- No `INTERNET` / `ACCESS_NETWORK_STATE` permission in `android/app/src/main/AndroidManifest.xml` (debug and profile manifests are exempt).
+- No `ACCESS_NETWORK_STATE` / `ACCESS_WIFI_STATE` permission in `android/app/src/main/AndroidManifest.xml`. `INTERNET` is allowed for the in-app updater only.
+- No network code (`HttpClient`, sockets, `package:http`/`dio`/`web_socket_channel`) anywhere in `lib/` except `lib/features/update/update_source.dart`.
 - No denylisted telemetry, crash-reporting or ad packages in `pubspec.lock`. It warns on direct HTTP clients.
 - No `package:flutter` imports under `lib/core/otp/`, and no `DateTime.now()` anywhere under `lib/core/`.
 - No `print(` in `lib/`. It warns on `debugPrint(` and `dart:developer` `log(`.
 - Android backup is off: `allowBackup="false"`, plus `data_extraction_rules.xml` excluding every domain from cloud backup and device transfer.
-- The merged manifest of the last release build requests only allowlisted permissions (`CAMERA`, `USE_BIOMETRIC`). It warns if there is no release build, or if it is older than `pubspec.lock` or the main manifest.
+- The merged manifest of the last release build requests only allowlisted permissions (`CAMERA`, `USE_BIOMETRIC`, `INTERNET`, `REQUEST_INSTALL_PACKAGES`). It warns if there is no release build, or if it is older than `pubspec.lock` or the main manifest.
 - `MainActivity` sets `FLAG_SECURE` and extends `FlutterFragmentActivity` (ERROR otherwise).
 
 ## Reporting

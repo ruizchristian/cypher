@@ -1,8 +1,8 @@
 name: Android build
 
 # Adapted from the Muso app's workflow. Pull requests run the checks; pushes to main, releases
-# and manual runs also build a signed APK. CypherAuth has no in-app updater (it never uses the
-# network), so release APKs are only attached for manual download.
+# and manual runs also build a signed APK. The APK attached to a release is what the in-app
+# updater (lib/features/update/) offers, so its name must stay CypherAuth-<version>-<build>.apk.
 on:
   push:
     branches: [main]
@@ -58,7 +58,7 @@ jobs:
       - name: Test
         run: flutter test
 
-      # Offline/security guard: network permissions, telemetry packages, FLAG_SECURE, backup
+      # Offline/security guard: network code only in the updater, telemetry packages, FLAG_SECURE, backup
       # exclusion, pure-Dart OTP core. (Its release-manifest audit runs after the build below.)
       - name: Guard (source)
         run: dart .claude/skills/verify/scripts/guard.dart

@@ -15,6 +15,7 @@ import 'package:cypher/data/account_repository.dart';
 import 'package:cypher/data/lock_service.dart';
 import 'package:cypher/features/accounts/accounts_strings.dart';
 import 'package:cypher/features/shared/providers.dart';
+import 'package:cypher/features/update/update.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -120,6 +121,14 @@ void main() {
           accountRepositoryProvider.overrideWithValue(repo),
           lockServiceProvider.overrideWithValue(lock),
           secureClipboardProvider.overrideWithValue(clipboard),
+          // Debug build: reports "unsupported" and never goes online.
+          updateControllerProvider.overrideWithValue(
+            UpdateController(
+              source: const GitHubUpdateSource(),
+              platform: const AndroidUpdatePlatform(),
+              now: DateTime.now,
+            )..init(),
+          ),
         ],
         child: const CypherApp(),
       ),

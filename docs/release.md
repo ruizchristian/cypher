@@ -53,6 +53,19 @@ Or with the GitHub CLI: `gh secret set ANDROID_KEYSTORE_PASSWORD` and
 The build number is the UTC time (`yyMMddHH`) in both places, so every build installs as an
 update. Bump `version:` in `pubspec.yaml` for user-visible releases.
 
+## In-app updates
+
+Release builds check GitHub for the newest release when the app starts and when it returns to
+the foreground (at most every 15 minutes), and offer it in a card on the account list and in
+Settings > Updates. Pre-releases count; drafts do not. The updater looks for an asset named
+`CypherAuth-<version>-<build>.apk` (CI names it so) and offers it only when `<build>` is higher than
+the installed versionCode. Nothing downloads until the user taps Install; the APK is checked against
+GitHub's size and SHA-256, then handed to Android's installer, which also requires the same
+signing key.
+
+So **publishing a GitHub release ships an update** to everyone on 1.0.2 or later. 1.0.0 and 1.0.1
+predate the updater and have to be updated by hand once.
+
 ## Before publishing
 
 - iOS is not built yet (needs a Mac): iOS export of backups, the Universal-Clipboard opt-out

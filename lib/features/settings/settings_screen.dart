@@ -6,6 +6,7 @@ import '../../data/lock_service.dart';
 import '../backup/export_backup_screen.dart';
 import '../backup/import_backup_screen.dart';
 import '../shared/providers.dart';
+import '../update/update.dart';
 import 'change_pin_screen.dart';
 import 'settings_strings.dart';
 
@@ -155,6 +156,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: const Text(SettingsStrings.importBackup),
             onTap: () => openImportBackup(context),
           ),
+          const _SectionHeader(SettingsStrings.updates),
+          const UpdateSettingsSection(),
         ],
       ),
     );

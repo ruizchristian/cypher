@@ -46,5 +46,6 @@ paths:
 
 ## Network
 
-- No network permission or entitlement outside the debug and profile variants. Plugins can merge permissions in silently, so the main manifest strips unused ones with `tools:node="remove"`, and the guard checks both the source manifest and the merged manifest of the last release build (allowlist: `CAMERA`). Rebuild release after any dependency change.
+- Release builds request `INTERNET` and `REQUEST_INSTALL_PACKAGES` for the in-app updater only. All network code lives in `lib/features/update/update_source.dart` (GitHub release list + APK download over HTTPS); the guard errors on `HttpClient`, sockets or HTTP packages anywhere else in `lib/`. The updater sends no account data, never downloads in the background (only when the user taps Install), checks the size and GitHub's SHA-256 digest, and hands the APK to Android's installer through a `FileProvider` limited to `cache/updates/`. Android itself refuses an APK not signed with CypherAuth's key, which is the real guarantee.
+- Plugins can merge permissions in silently, so the main manifest strips unused ones with `tools:node="remove"`, and the guard checks both the source manifest and the merged manifest of the last release build (allowlist: `CAMERA`, `USE_BIOMETRIC`, `INTERNET`, `REQUEST_INSTALL_PACKAGES`). Rebuild release after any dependency change.
 - Camera permission (scanner) is the only runtime permission the app should need. Give it a clear iOS `NSCameraUsageDescription`.
