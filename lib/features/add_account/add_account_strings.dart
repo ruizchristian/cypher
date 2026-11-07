@@ -72,19 +72,19 @@ abstract final class AddAccountStrings {
   static const String invalidAccountCode =
       'This account code is incomplete or damaged.';
   static const String unsupportedAlgorithm =
-      'This account uses an algorithm Cypher does not support.';
+      'This account uses an algorithm CypherAuth does not support.';
   static const String tooManyAccounts =
-      'This export holds more accounts than Cypher can import at once.';
+      'This export holds more accounts than CypherAuth can import at once.';
 
   // Confirm
   static const String confirmTitle = 'Add accounts';
   static String confirmAdd(int count) =>
       count == 1 ? 'Add 1 account' : 'Add $count accounts';
   static String duplicatesSkipped(int count) => count == 1
-      ? '1 account is already in Cypher and will be skipped.'
-      : '$count accounts are already in Cypher and will be skipped.';
+      ? '1 account is already in CypherAuth and will be skipped.'
+      : '$count accounts are already in CypherAuth and will be skipped.';
   static const String allDuplicates =
-      'Every account here is already in Cypher.';
+      'Every account here is already in CypherAuth.';
   static const String timeBasedShort = 'Time-based';
   static const String counterBasedShort = 'Counter-based';
   static String added(int count) =>

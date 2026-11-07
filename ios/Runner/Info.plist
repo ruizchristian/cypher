@@ -3,15 +3,15 @@
 <plist version="1.0">
 <dict>
 	<key>NSCameraUsageDescription</key>
-	<string>Cypher uses the camera to scan the QR code a service shows when you turn on two-factor authentication.</string>
+	<string>CypherAuth uses the camera to scan the QR code a service shows when you turn on two-factor authentication.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Cypher reads the QR code in a screenshot or photo you choose.</string>
+	<string>CypherAuth reads the QR code in a screenshot or photo you choose.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Cypher</string>
+	<string>CypherAuth</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -19,7 +19,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Cypher</string>
+	<string>CypherAuth</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

@@ -1,7 +1,7 @@
 /// User-facing text for the accounts feature, kept in one place for later
 /// localization.
 abstract final class AccountsStrings {
-  static const String screenTitle = 'Cypher';
+  static const String screenTitle = 'CypherAuth';
   static const String emptyTitle = 'No accounts yet';
   static const String emptyBody = 'Tap "Add account" to set up your first one.';
   static const String addAccount = 'Add account';
@@ -33,7 +33,7 @@ abstract final class AccountsStrings {
   static const String cancel = 'Cancel';
   static const String deleteTitle = 'Delete this account?';
   static String deleteBody(String name) =>
-      '"$name" will be removed from Cypher. You will lose access to its codes '
+      '"$name" will be removed from CypherAuth. You will lose access to its codes '
       "unless you can set it up again or restore it from a backup. This can't "
       'be undone.';
   static const String untitled = 'Unnamed account';
@@ -53,6 +53,6 @@ abstract final class AccountsStrings {
   static const String startOver = 'Start over with no accounts';
   static const String startOverConfirmTitle = 'Start over?';
   static const String startOverConfirmBody =
-      'Cypher will open with no accounts. Your old file is kept, but Cypher '
+      'CypherAuth will open with no accounts. Your old file is kept, but CypherAuth '
       "can't read it.";
 }

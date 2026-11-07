@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # Cypher
 
-Cypher is a cross-platform **two-factor authenticator app** built with Flutter. It generates time-based (TOTP, RFC 6238) and counter-based (HOTP, RFC 4226) one-time passcodes, compatible with standard `otpauth://` QR codes issued by services like Google, GitHub, Microsoft, AWS, etc.
+Cypher (shown to users as **CypherAuth**) is a cross-platform **two-factor authenticator app** built with Flutter. It generates time-based (TOTP, RFC 6238) and counter-based (HOTP, RFC 4226) one-time passcodes, compatible with standard `otpauth://` QR codes issued by services like Google, GitHub, Microsoft, AWS, etc.
 
 ## Core principle: offline-first, zero network
 
@@ -39,7 +39,7 @@ Cypher is a cross-platform **two-factor authenticator app** built with Flutter. 
 
 ## Current state
 
-M0–M4 are done (foundations, OTP core, vault, accounts UI, adding accounts). `main.dart` opens the vault, then runs `ProviderScope` → `CypherApp`, with the injected dependencies (clock, repository, clipboard) overridden; their providers live in `lib/features/shared/providers.dart` and have no defaults. **Until M5 there is no lock screen: `AccountsScreen` unlocks the vault itself, so the app must not be released before M5.** `lib/core/otp/` holds Base32, HOTP/TOTP and the `otpauth://` / `otpauth-migration://` parsers (RFC-verified). `lib/data/account_repository.dart` owns accounts in an AES-GCM vault whose key is in Keystore/Keychain (`lib/app/vault_bootstrap.dart` wires the real adapters). On-device tests live in `integration_test/`; run them with `flutter test integration_test -d <device>`. Next is M5 (lock screen and hardening). Android package / application ID: `com.cypher.cypher`. The Dart SDK constraint is `^3.13.5`. Lints come from `flutter_lints` (`analysis_options.yaml`), which excludes `android/` and `ios/`.
+M0–M4 are done (foundations, OTP core, vault, accounts UI, adding accounts). `main.dart` opens the vault, then runs `ProviderScope` → `CypherApp`, with the injected dependencies (clock, repository, clipboard) overridden; their providers live in `lib/features/shared/providers.dart` and have no defaults. **Until M5 there is no lock screen: `AccountsScreen` unlocks the vault itself, so the app must not be released before M5.** `lib/core/otp/` holds Base32, HOTP/TOTP and the `otpauth://` / `otpauth-migration://` parsers (RFC-verified). `lib/data/account_repository.dart` owns accounts in an AES-GCM vault whose key is in Keystore/Keychain (`lib/app/vault_bootstrap.dart` wires the real adapters). On-device tests live in `integration_test/`; run them with `flutter test integration_test -d <device>`. Next is M5 (lock screen and hardening). Android package / application ID: `com.cypher.cypher`. User-visible name: **CypherAuth** (launcher label, iOS bundle names, `CypherApp.title`, user-facing strings); code and package names stay `cypher`. The Dart SDK constraint is `^3.13.5`. Lints come from `flutter_lints` (`analysis_options.yaml`), which excludes `android/` and `ios/`.
 
 ## Suggested structure
 

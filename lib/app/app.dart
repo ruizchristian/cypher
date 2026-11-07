@@ -6,7 +6,7 @@ import 'theme.dart';
 class CypherApp extends StatelessWidget {
   const CypherApp({super.key});
 
-  static const String title = 'Cypher';
+  static const String title = 'CypherAuth';
 
   @override
   Widget build(BuildContext context) {
