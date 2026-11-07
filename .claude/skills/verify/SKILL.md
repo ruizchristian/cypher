@@ -17,7 +17,7 @@ Run from the repo root, in this order. Report every step's actual result.
 
 - No `INTERNET` / `ACCESS_NETWORK_STATE` permission in `android/app/src/main/AndroidManifest.xml` (debug and profile manifests are exempt).
 - No denylisted telemetry, crash-reporting or ad packages in `pubspec.lock`. It warns on direct HTTP clients.
-- No `package:flutter` imports under `lib/core/otp/`.
+- No `package:flutter` imports under `lib/core/otp/`, and no `DateTime.now()` anywhere under `lib/core/`.
 - No `print(` in `lib/`. It warns on `debugPrint(` and `dart:developer` `log(`.
 - TODO lines for `FLAG_SECURE` in `MainActivity`, and for Android Auto Backup not yet disabled.
 

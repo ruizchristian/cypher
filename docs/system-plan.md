@@ -114,7 +114,7 @@ final class Account {
 | `Base32` | RFC 4648 decode/encode. Lenient input (case, spaces, hyphens, padding); strict alphabet. |
 | `Hotp.generate(secret, counter, algorithm, digits)` | RFC 4226 with a 64-bit counter. |
 | `Totp.generate(..., at: DateTime, period)` and `Totp.remaining(at, period)` | RFC 6238. Time is always passed in. |
-| `Clock` | `DateTime now()` interface: `SystemClock` in the app, `FakeClock` in tests. |
+| `Clock` | `DateTime now()` interface (added in M3): `SystemClock` lives in `app/` because `lib/core/` may not call `DateTime.now()`; `FakeClock` in tests. |
 | `OtpauthUri.parse(String) → ParseResult` | A `sealed` result: `ParsedAccount` or `ParseFailure(reason)`. The failure never echoes its input. |
 | `MigrationPayload.parse(String) → ...` | `otpauth-migration://` decoding: Base64, then a hand-written protobuf reader, with batch support. |
 
@@ -254,9 +254,9 @@ Every item goes through `/deliver`. The 🔒 items are **sensitive**: their plan
 | M | Deliverables | Acceptance criteria |
 |---|---|---|
 | **M0 Foundations** ✅ | `git init`; remove the counter template; `CypherApp`, theme (light/dark), route table, Riverpod; set `minSdk = 30` in `android/app/build.gradle.kts`; delete the `linux/`, `macos/`, `windows/` and `web/` folders and drop the guard's macOS entitlement check; replace the widget smoke test; record D1/D2/D8/D9 in `architecture.md` | The app launches to a placeholder screen; `/verify` is green; the template code is gone |
-| **M1 OTP core** | `Base32`, `Hotp`, `Totp`, `Clock`, `OtpauthUri`, `MigrationPayload` | All `otp-reference` vectors pass; malformed-URI tests pass; the guard confirms no Flutter imports |
+| **M1 OTP core** ✅ | `Base32`, `Hotp`, `Totp`, `OtpSecret`, `OtpauthUri`, `MigrationPayload` (`Clock` moved to M3, where the ticker first needs it) | All `otp-reference` vectors pass; malformed-URI tests pass; the guard confirms no Flutter imports |
 | **M2 Vault** 🔒 | `Account`, `VaultCodec`, `VaultCipher`, `SecretStore` adapter, `AccountRepository`, atomic writes, reinstall and unreadable-vault handling | Round-trip, tamper (flipped byte → failure) and migration tests; the repository is tested with a fake `SecretStore`; `toString` redaction tests |
-| **M3 Accounts UI** | List, ticker, countdown, tap-to-copy with `SecureClipboard` 🔒, search, reorder, edit/delete, HOTP next | Widget tests with `FakeClock` cover boundary rollover; no pending timers; one ticker verified |
+| **M3 Accounts UI** | `Clock` interface (+ `SystemClock` in `app/`, `FakeClock` in `test/fakes/`), list, ticker, countdown, tap-to-copy with `SecureClipboard` 🔒, search, reorder, edit/delete, HOTP next | Widget tests with `FakeClock` cover boundary rollover; no pending timers; one ticker verified |
 | **M4 Add account** 🔒 | Manual form, paste URI, scanner, image import, migration-QR batches | Camera stops off-screen; the merged-manifest audit is clean (§9); invalid input shows a typed error with no echo |
 | **M5 Lock and hardening** 🔒 | `FlutterFragmentActivity` + `FLAG_SECURE`, backup exclusion, iOS overlay, PIN onboarding/unlock, biometrics, auto-lock, throttling | Both guard TODOs are gone **and converted to ERROR checks**; no code renders before unlock (widget test); throttling survives a restart |
 | **M6 Backup** 🔒 | Export/import (§7), Argon2id benchmark and calibration, duplicate handling | Export → import round-trip; wrong password and a corrupted file give the same error; import is all-or-nothing; KDF runs off the UI isolate |

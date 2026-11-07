@@ -123,6 +123,20 @@ void _checkPureDartCore() {
       );
     }
   }
+
+  // Core code takes time as a parameter so it stays deterministic in tests.
+  final wallClock = RegExp(r'\bDateTime\.now\(');
+  for (final file in _dartFiles('lib/core')) {
+    final lines = file.readAsLinesSync();
+    for (var i = 0; i < lines.length; i++) {
+      if (lines[i].trimLeft().startsWith('//')) continue;
+      if (wallClock.hasMatch(lines[i])) {
+        _errors.add(
+          '${_rel(file)}:${i + 1} calls DateTime.now(); inject the time instead',
+        );
+      }
+    }
+  }
 }
 
 void _checkLogging() {

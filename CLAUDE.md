@@ -39,7 +39,7 @@ Cypher is a cross-platform **two-factor authenticator app** built with Flutter. 
 
 ## Current state
 
-M0 (foundations) is done: `main.dart` → `ProviderScope` → `CypherApp` (`lib/app/`), with light and dark themes and one route to a placeholder `AccountsScreen`. There is no OTP, storage or lock code yet; the next milestone is M1 in `docs/system-plan.md`. Android package / application ID: `com.cypher.cypher`. The Dart SDK constraint is `^3.13.5`. Lints come from `flutter_lints` (`analysis_options.yaml`), which excludes `android/` and `ios/`.
+M0 (foundations) and M1 (OTP core) are done. `main.dart` → `ProviderScope` → `CypherApp` (`lib/app/`) shows a placeholder `AccountsScreen`. `lib/core/otp/` has Base32, HOTP/TOTP and the `otpauth://` / `otpauth-migration://` parsers, all verified against RFC vectors. There is no storage or lock code yet; next is M2 (vault) in `docs/system-plan.md`. Android package / application ID: `com.cypher.cypher`. The Dart SDK constraint is `^3.13.5`. Lints come from `flutter_lints` (`analysis_options.yaml`), which excludes `android/` and `ios/`.
 
 ## Suggested structure
 
