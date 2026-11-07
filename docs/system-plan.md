@@ -260,7 +260,7 @@ Every item goes through `/deliver`. The 🔒 items are **sensitive**: their plan
 | **M3 Accounts UI** ✅ | `Clock` interface (+ `SystemClock` in `app/`, `FakeClock` in `test/fakes/`), list, ticker, countdown, tap-to-copy with `SecureClipboard` 🔒, search, reorder, edit/delete, HOTP next | Widget tests with `FakeClock` cover boundary rollover; no pending timers; one ticker verified |
 | **M4 Add account** 🔒 ✅ | Manual form, paste URI, scanner, image import, migration-QR batches | Camera stops off-screen; the merged-manifest audit is clean (§9); invalid input shows a typed error with no echo |
 | **M5 Lock and hardening** 🔒 ✅ | `FlutterFragmentActivity` + `FLAG_SECURE`, iOS overlay, PIN onboarding/unlock, biometrics, auto-lock, throttling | The `FLAG_SECURE` guard TODO is gone **and converted to an ERROR check** (backup already is, since M2); no code renders before unlock (widget test); throttling survives a restart |
-| **M6 Backup** 🔒 | Export/import (§7), Argon2id benchmark and calibration, duplicate handling | Export → import round-trip; wrong password and a corrupted file give the same error; import is all-or-nothing; KDF runs off the UI isolate |
+| **M6 Backup** 🔒 ✅ | Export/import (§7), Argon2id benchmark and calibration, duplicate handling | Export → import round-trip; wrong password and a corrupted file give the same error; import is all-or-nothing; KDF runs off the UI isolate |
 | **M7 Release readiness** | Accessibility pass (semantics, text scaling), string centralization, release builds (app icon done early, in M4) for both platforms, a final full-app security review | `flutter build apk` + iOS archive succeed; release-manifest audit clean; `@refine` over the whole `lib/` |
 
 **After v1:**

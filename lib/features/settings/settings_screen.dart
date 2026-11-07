@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/security/biometric_auth.dart';
 import '../../data/lock_service.dart';
+import '../backup/export_backup_screen.dart';
+import '../backup/import_backup_screen.dart';
 import '../shared/providers.dart';
 import 'change_pin_screen.dart';
 import 'settings_strings.dart';
@@ -95,17 +97,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final available = _biometricsAvailable;
+    final canSave = ref.watch(backupFilesProvider).canSave;
+    final lastBackup = ref.watch(lastBackupProvider).value;
     return Scaffold(
       appBar: AppBar(title: const Text(SettingsStrings.title)),
       body: ListView(
         children: [
-          ListTile(
-            title: Text(
-              SettingsStrings.security,
-              style: Theme.of(context).textTheme.titleSmall
-                  ?.copyWith(color: Theme.of(context).colorScheme.primary),
-            ),
-          ),
+          const _SectionHeader(SettingsStrings.security),
           SwitchListTile(
             secondary: const Icon(Icons.fingerprint),
             title: const Text(SettingsStrings.biometrics),
@@ -140,7 +138,43 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             title: const Text(SettingsStrings.lockNow),
             onTap: () => ref.read(lockServiceProvider).lock(),
           ),
+          const _SectionHeader(SettingsStrings.backup),
+          ListTile(
+            leading: const Icon(Icons.upload_file_outlined),
+            title: const Text(SettingsStrings.exportBackup),
+            subtitle: Text(
+              canSave
+                  ? SettingsStrings.lastBackup(lastBackup?.toLocal())
+                  : SettingsStrings.exportUnavailable,
+            ),
+            enabled: canSave,
+            onTap: () => openExportBackup(context),
+          ),
+          ListTile(
+            leading: const Icon(Icons.download_outlined),
+            title: const Text(SettingsStrings.importBackup),
+            onTap: () => openImportBackup(context),
+          ),
         ],
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ListTile(
+      title: Text(
+        text,
+        style: theme.textTheme.titleSmall?.copyWith(
+          color: theme.colorScheme.primary,
+        ),
       ),
     );
   }

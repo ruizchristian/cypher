@@ -3,7 +3,14 @@
 abstract final class AccountsStrings {
   static const String screenTitle = 'CypherAuth';
   static const String emptyTitle = 'No accounts yet';
-  static const String emptyBody = 'Tap "Add account" to set up your first one.';
+  static const String emptyBody =
+      'Tap "Add account" to set up your first one, or restore a backup '
+      'from Settings → Import backup.';
+  static const String backupReminder =
+      "You don't have a backup yet. If you forget your PIN or lose this "
+      "phone, your accounts can't be recovered.";
+  static const String backupNow = 'Back up';
+  static const String backupLater = 'Later';
   static const String addAccount = 'Add account';
   static const String noMatches = 'No matching accounts';
   static const String searchHint = 'Search accounts';
@@ -50,7 +57,8 @@ abstract final class AccountsStrings {
   static const String unreadableCorrupt = 'The saved accounts file is damaged.';
   static const String unreadableKept =
       'Nothing has been deleted. If you start over, the old file is kept on '
-      'this device.';
+      'this device, and you can restore your accounts from a backup in '
+      'Settings → Import backup.';
   static const String startOver = 'Start over with no accounts';
   static const String startOverConfirmTitle = 'Start over?';
   static const String startOverConfirmBody =

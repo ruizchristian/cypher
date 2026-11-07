@@ -47,6 +47,15 @@ final class PinRejected extends PinAttempt {
   final int attemptsBeforeWait;
 }
 
+/// Outcome of re-checking the PIN while unlocked ([LockService.confirmPin]).
+enum PinCheck {
+  correct,
+  wrong,
+
+  /// Too many wrong PINs: the app has locked, with a wait.
+  lockedOut,
+}
+
 enum ChangePinResult {
   changed,
 
@@ -258,34 +267,49 @@ final class LockService {
     }
   }
 
-  /// Changes the PIN after checking the current one.
-  ///
-  /// Wrong current PINs count towards the same throttle as the lock screen;
-  /// otherwise this screen would be an unthrottled way to guess the PIN on
-  /// an unlocked phone. Reaching a wait locks the app.
+  /// Changes the PIN after checking the current one with [confirmPin], so
+  /// wrong current PINs are throttled like the lock screen's.
   Future<ChangePinResult> changePin(String current, String next) async {
-    if (_state is! LockUnlocked) throw StateError('Unlock first');
-    _failures++;
-    await _writeThrottle(); // counted before the check, as on the lock screen
-    final encoded = await _store.read(pinKey);
-    final ok =
-        encoded != null &&
-        await PinHasher.verify(current, encoded, inIsolate: _hashInIsolate);
-    if (!ok) {
-      final waitFor = PinThrottle.waitAfter(_failures);
-      if (waitFor == null) return ChangePinResult.wrongPin;
-      _lockedUntil = _now().add(waitFor);
-      await _writeThrottle();
-      lock();
-      return ChangePinResult.lockedOut;
+    switch (await confirmPin(current)) {
+      case PinCheck.wrong:
+        return ChangePinResult.wrongPin;
+      case PinCheck.lockedOut:
+        return ChangePinResult.lockedOut;
+      case PinCheck.correct:
+        break;
     }
-    await _clearThrottle();
     await _store.write(
       pinKey,
       await PinHasher.hash(next, params: _params, inIsolate: _hashInIsolate),
     );
     await _rememberPinLength(next);
     return ChangePinResult.changed;
+  }
+
+  /// Re-checks the PIN while unlocked, before a sensitive action (changing
+  /// the PIN, exporting every secret).
+  ///
+  /// Wrong PINs count towards the same throttle as the lock screen, counted
+  /// before the check; otherwise this would be an unthrottled way to guess
+  /// the PIN on an unlocked phone. Reaching a wait locks the app.
+  Future<PinCheck> confirmPin(String pin) async {
+    if (_state is! LockUnlocked) throw StateError('Unlock first');
+    _failures++;
+    await _writeThrottle();
+    final encoded = await _store.read(pinKey);
+    final ok =
+        encoded != null &&
+        await PinHasher.verify(pin, encoded, inIsolate: _hashInIsolate);
+    if (!ok) {
+      final waitFor = PinThrottle.waitAfter(_failures);
+      if (waitFor == null) return PinCheck.wrong;
+      _lockedUntil = _now().add(waitFor);
+      await _writeThrottle();
+      lock();
+      return PinCheck.lockedOut;
+    }
+    await _clearThrottle();
+    return PinCheck.correct;
   }
 
   /// Turning biometrics on requires a successful biometric check first, so

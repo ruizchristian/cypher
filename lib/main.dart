@@ -7,8 +7,10 @@ import 'app/vault_bootstrap.dart';
 import 'core/security/platform/flutter_secret_store.dart';
 import 'core/security/platform/flutter_secure_clipboard.dart';
 import 'core/security/platform/local_auth_biometrics.dart';
+import 'data/backup_service.dart';
 import 'data/lock_service.dart';
 import 'features/add_account/zxing_qr_input.dart';
+import 'features/backup/platform_backup_files.dart';
 import 'features/shared/providers.dart';
 
 Future<void> main() async {
@@ -22,12 +24,20 @@ Future<void> main() async {
     now: clock.now,
   );
   await lock.initialize();
+  final backup = BackupService(
+    repository: repository,
+    store: const FlutterSecretStore(),
+    now: clock.now,
+  );
+  await backup.initialize();
   runApp(
     ProviderScope(
       overrides: [
         clockProvider.overrideWithValue(clock),
         accountRepositoryProvider.overrideWithValue(repository),
         lockServiceProvider.overrideWithValue(lock),
+        backupServiceProvider.overrideWithValue(backup),
+        backupFilesProvider.overrideWithValue(const PlatformBackupFiles()),
         secureClipboardProvider.overrideWithValue(FlutterSecureClipboard()),
         qrScannerBuilderProvider.overrideWithValue(zxingScanner),
         qrImageReaderProvider.overrideWithValue(ZxingQrImageReader()),

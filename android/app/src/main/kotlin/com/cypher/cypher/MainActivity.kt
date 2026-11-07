@@ -4,16 +4,31 @@ import android.content.ClipData
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.PersistableBundle
+import android.provider.DocumentsContract
 import android.view.WindowManager
+import androidx.activity.result.contract.ActivityResultContracts
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 // FlutterFragmentActivity is required by local_auth (biometric prompt).
 class MainActivity : FlutterFragmentActivity() {
+    // A backup waiting for the user to pick where to save it, and the Dart
+    // call to answer once they have (or cancelled).
+    private var pendingBackup: ByteArray? = null
+    private var pendingResult: MethodChannel.Result? = null
+
+    // Android's system "Save as" dialog (Storage Access Framework): the user
+    // picks the location, so the app needs no storage permission.
+    private val createDocument =
+        registerForActivityResult(
+            ActivityResultContracts.CreateDocument("application/octet-stream"),
+        ) { uri -> finishSave(uri) }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Block screenshots, screen recording and the recents thumbnail in
@@ -28,23 +43,91 @@ class MainActivity : FlutterFragmentActivity() {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result ->
-                val text = call.argument<String>("text")
-                if (text == null) {
-                    result.error("bad_args", "text is required", null)
-                    return@setMethodCallHandler
-                }
                 when (call.method) {
-                    "copySensitive" -> {
-                        copySensitive(text)
-                        result.success(null)
+                    "copySensitive", "clearIfUnchanged" -> {
+                        val text = call.argument<String>("text")
+                        if (text == null) {
+                            result.error("bad_args", "text is required", null)
+                        } else {
+                            if (call.method == "copySensitive") {
+                                copySensitive(text)
+                            } else {
+                                clearIfUnchanged(text)
+                            }
+                            result.success(null)
+                        }
                     }
-                    "clearIfUnchanged" -> {
-                        clearIfUnchanged(text)
-                        result.success(null)
+                    "saveBackup" -> {
+                        val name = call.argument<String>("name")
+                        val bytes = call.argument<ByteArray>("bytes")
+                        when {
+                            name == null || bytes == null ->
+                                result.error("bad_args", "name and bytes are required", null)
+                            pendingResult != null ->
+                                result.error("busy", "a save is already in progress", null)
+                            else -> {
+                                pendingBackup = bytes
+                                pendingResult = result
+                                createDocument.launch(name)
+                            }
+                        }
                     }
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    /**
+     * Writes the pending backup to [uri] and answers Dart with true, or false
+     * if the user cancelled.
+     *
+     * The write runs on a background thread: cloud document providers (e.g.
+     * Google Drive) can block inside openOutputStream/write, which on the
+     * main thread would freeze the app. If the write fails, the empty file
+     * the system just created is removed.
+     */
+    private fun finishSave(uri: Uri?) {
+        val result = pendingResult ?: return
+        val bytes = pendingBackup
+        pendingResult = null
+        pendingBackup = null
+        if (uri == null || bytes == null) {
+            result.success(false)
+            return
+        }
+        Thread {
+            val error = try {
+                writeDocument(uri, bytes)
+                null
+            } catch (e: Exception) {
+                // The message names the failure type, never the contents.
+                runCatching { DocumentsContract.deleteDocument(contentResolver, uri) }
+                e.javaClass.simpleName
+            } finally {
+                bytes.fill(0)
+            }
+            runOnUiThread {
+                if (error == null) {
+                    result.success(true)
+                } else {
+                    result.error("write_failed", error, null)
+                }
+            }
+        }.start()
+    }
+
+    /**
+     * Truncate-and-write ("wt") is not supported by every document provider;
+     * plain "w" is equivalent here because CreateDocument has just made an
+     * empty file.
+     */
+    private fun writeDocument(uri: Uri, bytes: ByteArray) {
+        val stream = try {
+            contentResolver.openOutputStream(uri, "wt")
+        } catch (e: IllegalArgumentException) {
+            contentResolver.openOutputStream(uri, "w")
+        } ?: throw java.io.IOException("could not open the chosen file")
+        stream.use { it.write(bytes) }
     }
 
     private val clipboard: ClipboardManager

@@ -4,15 +4,18 @@ import 'package:cypher/app/app.dart';
 import 'package:cypher/core/otp/otp_parameters.dart';
 import 'package:cypher/core/otp/otp_secret.dart';
 import 'package:cypher/core/otp/otp_types.dart';
+import 'package:cypher/core/security/backup_cipher.dart';
 import 'package:cypher/core/security/key_wrapper.dart';
 import 'package:cypher/core/security/pin_hasher.dart';
 import 'package:cypher/data/account_repository.dart';
+import 'package:cypher/data/backup_service.dart';
 import 'package:cypher/data/lock_service.dart';
 import 'package:cypher/features/shared/providers.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../fakes/fake_backup_files.dart';
 import '../fakes/fake_biometrics.dart';
 import '../fakes/fake_clock.dart';
 import '../fakes/fake_qr_input.dart';
@@ -36,6 +39,9 @@ const testPin = '123456';
 
 /// Cheap PIN hashing for tests (the real cost is benchmarked on device).
 const testPinParams = PinHashParams.pbkdf2(iterations: 1);
+
+/// Cheap backup encryption for tests (the real cost is benchmarked on device).
+const testBackupParams = BackupKdfParams.pbkdf2(iterations: 1);
 
 enum LockStart {
   /// No PIN yet: the app opens on PIN setup.
@@ -65,6 +71,7 @@ final class AppHarness {
   final FakeClock clock;
   final FakeSecureClipboard clipboard = FakeSecureClipboard();
   final FakeBiometrics biometrics = FakeBiometrics();
+  final FakeBackupFiles backupFiles = FakeBackupFiles();
   final FakeQrScanner scanner = FakeQrScanner();
   final FakeQrImageReader imageReader = FakeQrImageReader();
   final InMemorySecretStore secrets = InMemorySecretStore();
@@ -85,6 +92,7 @@ final class AppHarness {
 
   late AccountRepository repository;
   late LockService lock;
+  late BackupService backup;
 
   LockService newLockService(AccountRepository repository) => LockService(
     store: secrets,
@@ -118,6 +126,14 @@ final class AppHarness {
       }
     }
     await lock.initialize();
+    backup = BackupService(
+      repository: repository,
+      store: secrets,
+      now: clock.now,
+      params: testBackupParams,
+      inIsolate: false,
+    );
+    await backup.initialize();
     if (start == LockStart.unlocked) {
       final result = await lock.unlockWithPin(testPin);
       expect(result, isA<PinAccepted>());
@@ -128,6 +144,8 @@ final class AppHarness {
           clockProvider.overrideWithValue(clock),
           accountRepositoryProvider.overrideWithValue(repository),
           lockServiceProvider.overrideWithValue(lock),
+          backupServiceProvider.overrideWithValue(backup),
+          backupFilesProvider.overrideWithValue(backupFiles),
           secureClipboardProvider.overrideWithValue(clipboard),
           qrScannerBuilderProvider.overrideWithValue(scanner.build),
           qrImageReaderProvider.overrideWithValue(imageReader),

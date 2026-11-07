@@ -37,6 +37,7 @@ paths:
 
 ## Export / import format
 
+- Implemented in M6: `lib/core/security/backup_cipher.dart` (format + bounds), `lib/data/backup_service.dart`, `lib/features/backup/`. Measured on the emulator: export 1.4 s, import 0.8 s with Argon2id 64 MiB × 3. Invariants: header bounds (size ≤ 1 MiB, Argon2id m ≤ 256 MiB, t ≤ 10, p ≤ 4, PBKDF2 ≤ 10M) are checked **before** the KDF runs; export re-checks the PIN through `LockService.confirmPin` (shared throttle); `lastBackupAt` is recorded only after the save is confirmed; saving uses the Storage Access Framework (no storage permission), and iOS export stays off (`canSave == false`) until it can be built on a Mac.
 - KDF: Argon2id preferred (for example 64 MiB memory, 3 iterations, parallelism 1, adjustable). PBKDF2-HMAC-SHA256 with ≥ 600 000 iterations is the fallback. Store the parameters in the file header.
 - Encryption: AES-256-GCM with a fresh random 16-byte salt per export and a fresh 12-byte nonce per encryption. The header (magic, format version, KDF params, salt, nonce) is passed as AAD.
 - Run the KDF off the UI isolate (`Isolate.run`).

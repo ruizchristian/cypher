@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/account.dart';
 import '../../data/account_repository.dart';
 import '../add_account/add_account_sheet.dart';
+import '../backup/export_backup_screen.dart';
 import '../settings/settings_screen.dart';
 import '../shared/providers.dart';
 import 'account_tile.dart';
@@ -23,6 +24,9 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
   final TextEditingController _search = TextEditingController();
   bool _searching = false;
 
+  // "Later" on the backup reminder hides it until the app restarts.
+  bool _reminderHidden = false;
+
   @override
   void initState() {
     super.initState();
@@ -40,6 +44,13 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
       _searching = searching;
       if (!searching) _search.clear();
     });
+  }
+
+  /// Only once the last backup is known to be "never".
+  bool get _showBackupReminder {
+    if (_reminderHidden) return false;
+    final lastBackup = ref.watch(lastBackupProvider);
+    return lastBackup.hasValue && lastBackup.value == null;
   }
 
   @override
@@ -97,9 +108,19 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
           title: AccountsStrings.emptyTitle,
           body: AccountsStrings.emptyBody,
         ),
-        VaultUnlocked(:final accounts) => _AccountList(
-          accounts: accounts,
-          query: _searching ? _search.text.trim() : '',
+        VaultUnlocked(:final accounts) => Column(
+          children: [
+            if (_showBackupReminder)
+              _BackupReminder(
+                onLater: () => setState(() => _reminderHidden = true),
+              ),
+            Expanded(
+              child: _AccountList(
+                accounts: accounts,
+                query: _searching ? _search.text.trim() : '',
+              ),
+            ),
+          ],
         ),
         VaultLocked() ||
         null => const Center(child: CircularProgressIndicator()),
@@ -200,6 +221,59 @@ class _Message extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown until the first backup: without one, a forgotten PIN or a lost
+/// phone means the accounts are gone.
+class _BackupReminder extends ConsumerWidget {
+  const _BackupReminder({required this.onLater});
+
+  final VoidCallback onLater;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final scheme = Theme.of(context).colorScheme;
+    final canSave = ref.watch(backupFilesProvider).canSave;
+    return Card(
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      color: scheme.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 8, 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.backup_outlined, color: scheme.onSecondaryContainer),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    AccountsStrings.backupReminder,
+                    style: TextStyle(color: scheme.onSecondaryContainer),
+                  ),
+                ),
+              ],
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: onLater,
+                  child: const Text(AccountsStrings.backupLater),
+                ),
+                if (canSave)
+                  TextButton(
+                    onPressed: () => openExportBackup(context),
+                    child: const Text(AccountsStrings.backupNow),
+                  ),
+              ],
+            ),
           ],
         ),
       ),

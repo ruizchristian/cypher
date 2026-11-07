@@ -111,7 +111,13 @@ void _checkReleaseManifest() {
     return;
   }
   final merged = manifests.first;
-  final builtAt = merged.lastModifiedSync();
+  // Gradle leaves the merged manifest untouched when its content is
+  // unchanged, so its timestamp can predate a fresh build. The APK is
+  // rewritten by every release build, so it tells when the build ran.
+  final apk = File(_path('build/app/outputs/flutter-apk/app-release.apk'));
+  final builtAt = apk.existsSync()
+      ? apk.lastModifiedSync()
+      : merged.lastModifiedSync();
   for (final input in const [
     'pubspec.lock',
     'android/app/src/main/AndroidManifest.xml',

@@ -10,6 +10,17 @@ abstract final class SettingsStrings {
   static const String autoLock = 'Auto-lock';
   static const String changePin = 'Change PIN';
   static const String lockNow = 'Lock now';
+  static const String backup = 'Backup';
+  static const String exportBackup = 'Export backup';
+  static const String importBackup = 'Import backup';
+  static const String exportUnavailable =
+      "Exporting isn't available on this device yet.";
+  static String lastBackup(DateTime? at) {
+    if (at == null) return 'No backup yet';
+    String two(int n) => n.toString().padLeft(2, '0');
+    return 'Last backup: ${at.year}-${two(at.month)}-${two(at.day)}';
+  }
+
   static const String biometricEnableReason =
       'Confirm to use biometrics for CypherAuth';
 
