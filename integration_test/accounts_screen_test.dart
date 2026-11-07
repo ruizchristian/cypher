@@ -26,7 +26,7 @@ import 'package:path_provider/path_provider.dart';
 /// and the native clipboard channel. Uses its own vault and key name.
 ///
 /// Screenshots are written to the app's files directory under `screenshots/`
-/// (pull with `adb exec-out run-as com.cypher.cypher cat files/screenshots/…`).
+/// (pull with `adb exec-out run-as com.ruizchristian.cypherauth cat files/screenshots/…`).
 /// The countdown rings animate continuously while codes are visible, so the
 /// screen never "settles"; wait a fixed time instead of pumpAndSettle.
 Future<void> settle(WidgetTester tester) async {
