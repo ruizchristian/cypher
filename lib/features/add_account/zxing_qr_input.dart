@@ -19,6 +19,14 @@ Widget zxingScanner({
     showGallery: false,
     showToggleCamera: false,
     isMultiScan: false,
+    // Decode the whole frame (0 = no crop; this also hides the scan box).
+    // The default centre crop did not line up with the preview on real
+    // phones: the decoder saw the code cut off at the edge of its square
+    // while it looked centred on screen.
+    cropPercent: 0,
+    // The default waits 1 s after every frame without a code, so a
+    // half-aimed first frame left the user waiting; retry quickly instead.
+    scanDelay: const Duration(milliseconds: 150),
     scanDelaySuccess: const Duration(milliseconds: 300),
     onScan: (code) {
       final text = code.text;
