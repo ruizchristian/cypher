@@ -114,7 +114,7 @@ final class Account {
 | `Base32` | RFC 4648 decode/encode. Lenient input (case, spaces, hyphens, padding); strict alphabet. |
 | `Hotp.generate(secret, counter, algorithm, digits)` | RFC 4226 with a 64-bit counter. |
 | `Totp.generate(..., at: DateTime, period)` and `Totp.remaining(at, period)` | RFC 6238. Time is always passed in. |
-| `Clock` | `DateTime now()` interface (added in M3): `SystemClock` lives in `app/` because `lib/core/` may not call `DateTime.now()`; `FakeClock` in tests. |
+| `Clock` | `DateTime now()` interface (`lib/core/clock.dart`, added in M3): `SystemClock` lives in `app/` because `lib/core/` may not call `DateTime.now()`; `FakeClock` in tests. |
 | `OtpauthUri.parse(String) → ParseResult` | A `sealed` result: `ParsedAccount` or `ParseFailure(reason)`. The failure never echoes its input. |
 | `MigrationPayload.parse(String) → ...` | `otpauth-migration://` decoding: Base64, then a hand-written protobuf reader, with batch support. |
 
@@ -130,7 +130,7 @@ Reference vectors and the URI spec are in the `otp-reference` skill.
 | `SecretStore` *(interface)* | `read/write/delete(String key)`, implemented over `flutter_secure_storage` with `*_this_device` Keychain accessibility. |
 | `BiometricAuth` *(interface)* | `isAvailable()` and `authenticate(reason)`, implemented over `local_auth`. |
 | `ScreenGuard` *(interface)* | Enables secure-window mode. Android: `FLAG_SECURE`. iOS: no-op (the privacy overlay is handled in `app/`). |
-| `SecureClipboard` *(interface)* | `copy(code)` marks the clip sensitive on Android 13+ and schedules a conditional clear after 30 s. |
+| `SecureClipboard` *(interface)* | `copyCode(code)`. Android (via the `cypher/platform` channel in `MainActivity.kt`): marks the clip sensitive, and after 30 s clears it unless it visibly holds something else (in the background Android hides the clipboard, so it clears then too). iOS: clears unconditionally after 30 s, because reading the clipboard would trigger the paste prompt. **Open:** iOS `.localOnly` (no Universal Clipboard) and `.expirationDate` need Swift code, deferred until a Mac is available. |
 
 ### 5.3 Repositories (`data/`)
 - `AccountRepository`: `unlock()` loads and decrypts the vault into memory; `lock()` drops it. It exposes `Stream<List<Account>>` and `add/update/delete/reorder/incrementCounter`. Each mutation writes through atomically. HOTP `incrementCounter` **persists before** the new code is shown, so the counter never repeats.
@@ -257,7 +257,7 @@ Every item goes through `/deliver`. The 🔒 items are **sensitive**: their plan
 | **M0 Foundations** ✅ | `git init`; remove the counter template; `CypherApp`, theme (light/dark), route table, Riverpod; set `minSdk = 30` in `android/app/build.gradle.kts`; delete the `linux/`, `macos/`, `windows/` and `web/` folders and drop the guard's macOS entitlement check; replace the widget smoke test; record D1/D2/D8/D9 in `architecture.md` | The app launches to a placeholder screen; `/verify` is green; the template code is gone |
 | **M1 OTP core** ✅ | `Base32`, `Hotp`, `Totp`, `OtpSecret`, `OtpauthUri`, `MigrationPayload` (`Clock` moved to M3, where the ticker first needs it) | All `otp-reference` vectors pass; malformed-URI tests pass; the guard confirms no Flutter imports |
 | **M2 Vault** 🔒 ✅ | Android backup and device-transfer exclusion (moved here from M5, because the vault first exists in M2), `Account`, `VaultCodec`, `VaultCipher`, `SecretStore` adapter, `AccountRepository`, atomic writes, reinstall and unreadable-vault handling | Round-trip, tamper (flipped byte → failure) and migration tests; the repository is tested with a fake `SecretStore`; `toString` redaction tests |
-| **M3 Accounts UI** | `Clock` interface (+ `SystemClock` in `app/`, `FakeClock` in `test/fakes/`), list, ticker, countdown, tap-to-copy with `SecureClipboard` 🔒, search, reorder, edit/delete, HOTP next | Widget tests with `FakeClock` cover boundary rollover; no pending timers; one ticker verified |
+| **M3 Accounts UI** ✅ | `Clock` interface (+ `SystemClock` in `app/`, `FakeClock` in `test/fakes/`), list, ticker, countdown, tap-to-copy with `SecureClipboard` 🔒, search, reorder, edit/delete, HOTP next | Widget tests with `FakeClock` cover boundary rollover; no pending timers; one ticker verified |
 | **M4 Add account** 🔒 | Manual form, paste URI, scanner, image import, migration-QR batches | Camera stops off-screen; the merged-manifest audit is clean (§9); invalid input shows a typed error with no echo |
 | **M5 Lock and hardening** 🔒 | `FlutterFragmentActivity` + `FLAG_SECURE`, iOS overlay, PIN onboarding/unlock, biometrics, auto-lock, throttling | The `FLAG_SECURE` guard TODO is gone **and converted to an ERROR check** (backup already is, since M2); no code renders before unlock (widget test); throttling survives a restart |
 | **M6 Backup** 🔒 | Export/import (§7), Argon2id benchmark and calibration, duplicate handling | Export → import round-trip; wrong password and a corrupted file give the same error; import is all-or-nothing; KDF runs off the UI isolate |
