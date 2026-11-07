@@ -26,6 +26,9 @@ paths:
 - Every persisted or exported structure carries a schema/format version, and readers handle older versions.
 - One feature must not import another feature's internals. Shared widgets go in `features/shared/` (or `app/` for app-wide chrome).
 
-## Decisions not yet made
+## Recorded decisions (details in `docs/system-plan.md` §3)
 
-State management is not chosen yet (`flutter_riverpod` is the suggested candidate). The first change that introduces it must record the choice and its conventions here, replacing this section.
+- **State: `flutter_riverpod` 3.x, without code generation** (no `riverpod_generator`/`build_runner`). The app root is wrapped in `ProviderScope` in `main.dart`. Tests override providers through `ProviderScope(overrides: [...])` instead of reaching into globals. Providers that hold secrets or the unlocked vault are torn down when the app locks.
+- **Routing: plain `Navigator`** with `onGenerateRoute` in `lib/app/routes.dart`. Route names live in `AppRoutes`. Arguments carry IDs, never secrets or URIs. No `go_router`, and no deep links.
+- **The PIN is mandatory**; biometrics are an optional shortcut on top.
+- **Platforms: Android and iOS only**, with Android `minSdk = 30`. Don't add desktop or web code paths.

@@ -3,7 +3,6 @@ paths:
   - "lib/**/*.dart"
   - "android/app/src/main/**"
   - "ios/Runner/**"
-  - "macos/Runner/**"
 ---
 
 # Security implementation guide
@@ -12,8 +11,8 @@ paths:
 
 ## Secrets at rest
 
-- Store secrets with `flutter_secure_storage` (Android Keystore, iOS/macOS Keychain), or in an encrypted database whose key is the only thing in secure storage.
-- iOS/macOS: use a `*_this_device` Keychain accessibility class (e.g. `first_unlock_this_device`) so secrets are not synced to iCloud or restored onto another device.
+- Store secrets with `flutter_secure_storage` (Android Keystore, iOS Keychain), or in an encrypted database whose key is the only thing in secure storage.
+- iOS: use a `*_this_device` Keychain accessibility class (e.g. `first_unlock_this_device`) so secrets are not synced to iCloud or restored onto another device.
 - Android: exclude app data from Auto Backup and device transfer (`android:allowBackup="false"`, or `dataExtractionRules` / `fullBackupContent` that exclude everything). The user's backup path is the encrypted export.
 - Non-secret metadata (issuer, label, order, icon) may live outside secure storage, but must never contain the secret or the full `otpauth://` URI.
 
@@ -45,5 +44,5 @@ paths:
 
 ## Network
 
-- No network permission or entitlement outside the debug and profile variants. The guard script checks the release Android manifest and `macos/Runner/Release.entitlements`.
+- No network permission or entitlement outside the debug and profile variants. The guard script checks the release Android manifest.
 - Camera permission (scanner) is the only runtime permission the app should need. Give it a clear iOS `NSCameraUsageDescription`.

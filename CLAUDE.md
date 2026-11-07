@@ -10,8 +10,8 @@ Cypher is a cross-platform **two-factor authenticator app** built with Flutter. 
 
 - The app must work **fully offline**. Code generation, account storage, import/export and all UI flows require no network.
 - Do **not** add analytics, crash reporting, telemetry, ads, remote config, or any package that phones home.
-- Do not add the `INTERNET` permission to the Android manifest for release builds, and do not enable network entitlements on iOS/macOS unless explicitly requested.
-  - The Flutter template already puts `INTERNET` in `android/app/src/debug/` and `src/profile/` manifests, and `com.apple.security.network.server` in `macos/Runner/DebugProfile.entitlements`. That's expected, because the Flutter tool needs them for hot reload and debugging. Leave them there, but keep `android/app/src/main/AndroidManifest.xml` and `macos/Runner/Release.entitlements` free of network permissions.
+- Do not add the `INTERNET` permission to the Android manifest for release builds, and do not add network-related entitlements on iOS unless explicitly requested.
+  - The Flutter template already puts `INTERNET` in `android/app/src/debug/` and `src/profile/` manifests. That's expected, because the Flutter tool needs them for hot reload and debugging. Leave them there, but keep `android/app/src/main/AndroidManifest.xml` free of network permissions.
 - Any future sync/backup feature must be opt-in and end-to-end encrypted; local encrypted export files are the default backup path.
 
 ## Security requirements
@@ -33,13 +33,13 @@ Cypher is a cross-platform **two-factor authenticator app** built with Flutter. 
 
 ## Tech stack
 
-- Flutter (stable) / Dart 3.x. It targets **Android and iOS only**: no desktop or web, and Android `minSdk` is 30. The desktop/web platform folders are scaffold leftovers due for removal in M0.
+- Flutter (stable) / Dart 3.x. It targets **Android and iOS only**: no desktop or web, and Android `minSdk` is 30.
 - Suggested packages (all offline): `flutter_secure_storage`, `local_auth`, `mobile_scanner`, `crypto` / `cryptography`, a state management solution (e.g. `flutter_riverpod`).
 - Implement OTP generation in-house in pure Dart (HMAC per RFC 4226/6238) so it is fully testable and dependency-light.
 
 ## Current state
 
-The repo is still the stock `flutter create` scaffold. `lib/main.dart` is the counter demo and `test/widget_test.dart` is its smoke test, and no dependencies have been added beyond `cupertino_icons`. Replace both files when real features land. Android package / application ID: `com.cypher.cypher`. The Dart SDK constraint is `^3.13.5`. Lints come from `flutter_lints` (`analysis_options.yaml`), which excludes the platform folders.
+M0 (foundations) is done: `main.dart` → `ProviderScope` → `CypherApp` (`lib/app/`), with light and dark themes and one route to a placeholder `AccountsScreen`. There is no OTP, storage or lock code yet; the next milestone is M1 in `docs/system-plan.md`. Android package / application ID: `com.cypher.cypher`. The Dart SDK constraint is `^3.13.5`. Lints come from `flutter_lints` (`analysis_options.yaml`), which excludes `android/` and `ios/`.
 
 ## Suggested structure
 

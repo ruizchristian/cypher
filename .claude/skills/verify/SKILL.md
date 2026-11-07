@@ -16,7 +16,6 @@ Run from the repo root, in this order. Report every step's actual result.
 ## What the guard checks
 
 - No `INTERNET` / `ACCESS_NETWORK_STATE` permission in `android/app/src/main/AndroidManifest.xml` (debug and profile manifests are exempt).
-- No `com.apple.security.network.*` in `macos/Runner/Release.entitlements`.
 - No denylisted telemetry, crash-reporting or ad packages in `pubspec.lock`. It warns on direct HTTP clients.
 - No `package:flutter` imports under `lib/core/otp/`.
 - No `print(` in `lib/`. It warns on `debugPrint(` and `dart:developer` `log(`.

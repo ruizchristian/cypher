@@ -253,7 +253,7 @@ Every item goes through `/deliver`. The 🔒 items are **sensitive**: their plan
 
 | M | Deliverables | Acceptance criteria |
 |---|---|---|
-| **M0 Foundations** | `git init`; remove the counter template; `CypherApp`, theme (light/dark), route table, Riverpod; set `minSdk = 30` in `android/app/build.gradle.kts`; delete the `linux/`, `macos/`, `windows/` and `web/` folders and drop the guard's macOS entitlement check; replace the widget smoke test; record D1/D2/D8/D9 in `architecture.md` | The app launches to a placeholder screen; `/verify` is green; the template code is gone |
+| **M0 Foundations** ✅ | `git init`; remove the counter template; `CypherApp`, theme (light/dark), route table, Riverpod; set `minSdk = 30` in `android/app/build.gradle.kts`; delete the `linux/`, `macos/`, `windows/` and `web/` folders and drop the guard's macOS entitlement check; replace the widget smoke test; record D1/D2/D8/D9 in `architecture.md` | The app launches to a placeholder screen; `/verify` is green; the template code is gone |
 | **M1 OTP core** | `Base32`, `Hotp`, `Totp`, `Clock`, `OtpauthUri`, `MigrationPayload` | All `otp-reference` vectors pass; malformed-URI tests pass; the guard confirms no Flutter imports |
 | **M2 Vault** 🔒 | `Account`, `VaultCodec`, `VaultCipher`, `SecretStore` adapter, `AccountRepository`, atomic writes, reinstall and unreadable-vault handling | Round-trip, tamper (flipped byte → failure) and migration tests; the repository is tested with a fake `SecretStore`; `toString` redaction tests |
 | **M3 Accounts UI** | List, ticker, countdown, tap-to-copy with `SecureClipboard` 🔒, search, reorder, edit/delete, HOTP next | Widget tests with `FakeClock` cover boundary rollover; no pending timers; one ticker verified |

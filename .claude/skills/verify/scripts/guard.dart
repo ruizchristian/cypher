@@ -20,7 +20,6 @@ void main() {
   }
 
   _checkAndroidManifest();
-  _checkMacosEntitlements();
   _checkDependencies();
   _checkPureDartCore();
   _checkLogging();
@@ -65,14 +64,6 @@ void _checkAndroidManifest() {
     if (text.contains(permission)) {
       _errors.add('$manifest declares $permission (release must be offline)');
     }
-  }
-}
-
-void _checkMacosEntitlements() {
-  const entitlements = 'macos/Runner/Release.entitlements';
-  final text = _read(entitlements);
-  if (text != null && text.contains('com.apple.security.network.')) {
-    _errors.add('$entitlements enables a network entitlement');
   }
 }
 
