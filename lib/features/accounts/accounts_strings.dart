@@ -5,7 +5,7 @@ abstract final class AccountsStrings {
   static const String emptyTitle = 'No accounts yet';
   static const String emptyBody =
       'Tap "Add account" to set up your first one, or restore a backup '
-      'from Settings → Import backup.';
+      'from Settings > Import backup.';
   static const String backupReminder =
       "You don't have a backup yet. If you forget your PIN or lose this "
       "phone, your accounts can't be recovered.";
@@ -22,10 +22,13 @@ abstract final class AccountsStrings {
 
   static const String copied = 'Code copied. It will be cleared in 30 seconds.';
   static const String copyFailed = "Couldn't copy the code.";
-  static const String hotpHidden = 'Tap ↻ to show the next code';
+  static const String hotpHidden = 'Press refresh to show the next code';
   static const String nextCode = 'Generate next code';
   static const String accountMenu = 'Account options';
-  static const String reorderHandle = 'Drag to reorder';
+  static const String move = 'Move';
+  static const String reorderHint =
+      'To move an account, press and hold it, then drag it into place.';
+  static const String copiedShort = 'Copied';
   static const String edit = 'Edit';
   static const String delete = 'Delete';
 
@@ -58,7 +61,7 @@ abstract final class AccountsStrings {
   static const String unreadableKept =
       'Nothing has been deleted. If you start over, the old file is kept on '
       'this device, and you can restore your accounts from a backup in '
-      'Settings → Import backup.';
+      'Settings > Import backup.';
   static const String startOver = 'Start over with no accounts';
   static const String startOverConfirmTitle = 'Start over?';
   static const String startOverConfirmBody =

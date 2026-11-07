@@ -1,7 +1,12 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/security/pin_hasher.dart';
+import 'app_logo.dart';
+import 'motion.dart';
+import 'pressable.dart';
 
 // Text owned by the PIN pad itself (shared by lock and settings).
 abstract final class PinEntryStrings {
@@ -29,6 +34,7 @@ class PinEntry extends StatefulWidget {
     this.onBiometric,
     this.footer,
     this.autoSubmitLength,
+    this.errorSignal = 0,
   });
 
   final String title;
@@ -55,25 +61,45 @@ class PinEntry extends StatefulWidget {
   /// and no submit button is shown (a spinner shows while checking).
   final int? autoSubmitLength;
 
+  /// Increment to signal a rejected PIN: the dots shake and the phone gives
+  /// an error haptic. (A counter, so repeated errors each shake.)
+  final int errorSignal;
+
   @override
   State<PinEntry> createState() => _PinEntryState();
 }
 
-class _PinEntryState extends State<PinEntry> {
+class _PinEntryState extends State<PinEntry>
+    with SingleTickerProviderStateMixin {
   String _pin = '';
   final FocusNode _focus = FocusNode();
+  late final AnimationController _shake = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 320),
+  );
+
+  @override
+  void didUpdateWidget(PinEntry oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.errorSignal != oldWidget.errorSignal) {
+      HapticFeedback.heavyImpact();
+      if (!Motion.reduced(context)) _shake.forward(from: 0);
+    }
+  }
 
   bool get _active => widget.enabled && !widget.busy;
 
   @override
   void dispose() {
     _pin = '';
+    _shake.dispose();
     _focus.dispose();
     super.dispose();
   }
 
   void _digit(String d) {
     if (!_active || _pin.length >= PinPolicy.maxLength) return;
+    HapticFeedback.selectionClick();
     setState(() => _pin += d);
     if (_pin.length == widget.autoSubmitLength) _submit();
   }
@@ -126,12 +152,8 @@ class _PinEntryState extends State<PinEntry> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    Icons.lock_outline,
-                    size: 48,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(height: 16),
+                  const AppLogo(height: 56),
+                  const SizedBox(height: 20),
                   Text(
                     widget.title,
                     style: theme.textTheme.headlineSmall,
@@ -155,7 +177,22 @@ class _PinEntryState extends State<PinEntry> {
                             ),
                           ),
                   ),
-                  _PinDots(count: _pin.length),
+                  // A damped horizontal shake: big at first, settling to rest.
+                  AnimatedBuilder(
+                    animation: _shake,
+                    builder: (context, child) {
+                      final t = _shake.value;
+                      final dx = math.sin(t * math.pi * 6) * 10 * (1 - t);
+                      return Transform.translate(
+                        offset: Offset(dx, 0),
+                        child: child,
+                      );
+                    },
+                    child: _PinDots(
+                      count: _pin.length,
+                      error: widget.isError && _pin.isEmpty,
+                    ),
+                  ),
                   const SizedBox(height: 24),
                   _NumberPad(
                     enabled: _active,
@@ -207,9 +244,12 @@ class _PinEntryState extends State<PinEntry> {
 }
 
 class _PinDots extends StatelessWidget {
-  const _PinDots({required this.count});
+  const _PinDots({required this.count, this.error = false});
 
   final int count;
+
+  /// Outlines the empty dots in the error colour after a rejected PIN.
+  final bool error;
 
   @override
   Widget build(BuildContext context) {
@@ -229,7 +269,10 @@ class _PinDots extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: i < count ? scheme.primary : null,
-                border: Border.all(color: scheme.outline, width: 1.5),
+                border: Border.all(
+                  color: error ? scheme.error : scheme.outline,
+                  width: 1.5,
+                ),
               ),
             ),
         ],
@@ -265,9 +308,12 @@ class _NumberPad extends StatelessWidget {
           ['4', '5', '6'],
           ['7', '8', '9'],
         ])
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [for (final d in row) key(d)],
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [for (final d in row) key(d)],
+            ),
           ),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -301,13 +347,21 @@ class _PadKey extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final button = SizedBox(
-      width: 72,
-      height: 72,
-      child: TextButton(
-        onPressed: onPressed,
-        style: TextButton.styleFrom(shape: const CircleBorder()),
-        child: child,
+    final scheme = Theme.of(context).colorScheme;
+    final button = Pressable(
+      enabled: onPressed != null,
+      child: SizedBox(
+        width: 72,
+        height: 72,
+        child: TextButton(
+          onPressed: onPressed,
+          style: TextButton.styleFrom(
+            shape: const CircleBorder(),
+            foregroundColor: scheme.onSurface,
+            backgroundColor: scheme.surfaceContainerLow,
+          ),
+          child: child,
+        ),
       ),
     );
     return tooltip == null ? button : Tooltip(message: tooltip, child: button);

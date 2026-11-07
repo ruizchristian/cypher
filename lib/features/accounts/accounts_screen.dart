@@ -6,6 +6,7 @@ import '../../data/account_repository.dart';
 import '../add_account/add_account_sheet.dart';
 import '../backup/export_backup_screen.dart';
 import '../settings/settings_screen.dart';
+import '../shared/app_logo.dart';
 import '../shared/providers.dart';
 import 'account_tile.dart';
 import 'accounts_strings.dart';
@@ -104,6 +105,7 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
       body: switch (state) {
         VaultUnreadable(:final reason) => VaultUnreadableView(reason: reason),
         VaultUnlocked(:final accounts) when accounts.isEmpty => const _Message(
+          logo: true,
           icon: Icons.shield_outlined,
           title: AccountsStrings.emptyTitle,
           body: AccountsStrings.emptyBody,
@@ -177,21 +179,39 @@ class _AccountList extends ConsumerWidget {
             AccountTile(key: ValueKey(matches[i].id), account: matches[i]),
       );
     }
+    // On phones the default drag handles are a long-press anywhere on the
+    // row, so rows stay free of permanent handles. Screen readers get
+    // "move up/down" actions from the list.
     return ReorderableListView.builder(
-      buildDefaultDragHandles: false,
+      padding: const EdgeInsets.only(top: 4, bottom: 96),
       itemCount: accounts.length,
       onReorderItem: (from, to) => _reorder(context, ref, from, to),
-      itemBuilder: (_, i) => AccountTile(
-        key: ValueKey(accounts[i].id),
-        account: accounts[i],
-        dragIndex: i,
+      proxyDecorator: (child, _, animation) => AnimatedBuilder(
+        animation: animation,
+        builder: (context, child) => Material(
+          elevation: 6 * animation.value,
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          child: child,
+        ),
+        child: child,
       ),
+      itemBuilder: (_, i) =>
+          AccountTile(key: ValueKey(accounts[i].id), account: accounts[i]),
     );
   }
 }
 
 class _Message extends StatelessWidget {
-  const _Message({required this.icon, required this.title, this.body});
+  const _Message({
+    required this.icon,
+    required this.title,
+    this.body,
+    this.logo = false,
+  });
+
+  /// Shows the CypherAuth logo instead of [icon].
+  final bool logo;
 
   final IconData icon;
   final String title;
@@ -206,7 +226,10 @@ class _Message extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 64, color: theme.colorScheme.primary),
+            if (logo)
+              const AppLogo(height: 72)
+            else
+              Icon(icon, size: 56, color: theme.colorScheme.onSurfaceVariant),
             const SizedBox(height: 16),
             Text(
               title,

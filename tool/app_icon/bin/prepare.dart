@@ -49,6 +49,25 @@ void main(List<String> args) {
     return canvas;
   }
 
+  // In-app logo: tight crop, transparent, 512 px tall (screens tint it).
+  {
+    const height = 512;
+    final width = (logo.width * height / logo.height).round();
+    final scaled = img.copyResize(
+      logo,
+      width: width,
+      height: height,
+      interpolation: img.Interpolation.cubic,
+    );
+    final canvas = img.Image(width: width, height: height, numChannels: 4);
+    img.fill(canvas, color: img.ColorRgba8(0, 0, 0, 0));
+    for (final p in scaled) {
+      final a = (ink(p).clamp(0.0, 1.0) * 255).round();
+      if (a > 0) canvas.setPixelRgba(p.x, p.y, 0, 0, 0, a);
+    }
+    File('${out.path}/logo.png').writeAsBytesSync(img.encodePng(canvas));
+  }
+
   File('${out.path}/icon.png').writeAsBytesSync(img.encodePng(place(0.62, opaque: true)));
   final fg = img.encodePng(place(0.46, opaque: false));
   File('${out.path}/icon_foreground.png').writeAsBytesSync(fg);

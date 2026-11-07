@@ -2,6 +2,7 @@ import 'package:cypher/core/otp/otp_types.dart';
 import 'package:cypher/data/account_repository.dart';
 import 'package:cypher/features/accounts/account_display.dart';
 import 'package:cypher/features/accounts/accounts_strings.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -114,6 +115,19 @@ void main() {
   });
 
   group('list management', () {
+    testWidgets('the Move menu item explains press-and-hold', (tester) async {
+      final app = AppHarness();
+      await app.seed([hotpAccount('Bank')]);
+      await app.pump(tester);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip(AccountsStrings.accountMenu));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(AccountsStrings.move));
+      await tester.pumpAndSettle();
+      expect(find.text(AccountsStrings.reorderHint), findsOneWidget);
+      await app.unmount(tester);
+    });
+
     testWidgets('search filters by issuer and account name', (tester) async {
       final app = AppHarness();
       await app.seed([
@@ -121,7 +135,7 @@ void main() {
         hotpAccount('Google', 'alice@example.com'),
       ]);
       await app.pump(tester);
-      expect(find.byTooltip(AccountsStrings.reorderHandle), findsNWidgets(2));
+      expect(find.byType(ReorderableListView), findsOneWidget);
 
       await tester.tap(find.byTooltip(AccountsStrings.search));
       await tester.pumpAndSettle();
@@ -129,8 +143,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('GitHub'), findsOneWidget);
       expect(find.text('Google'), findsNothing);
-      // No reordering while filtered.
-      expect(find.byTooltip(AccountsStrings.reorderHandle), findsNothing);
+      // No reordering while filtered: indices would not match the stored order.
+      expect(find.byType(ReorderableListView), findsNothing);
 
       await tester.enterText(find.byType(TextField), 'ALICE');
       await tester.pumpAndSettle();
@@ -147,14 +161,15 @@ void main() {
       await app.unmount(tester);
     });
 
-    testWidgets('dragging the handle reorders and persists', (tester) async {
+    testWidgets('press-and-hold drags to reorder and persists', (tester) async {
       final app = AppHarness();
       await app.seed([hotpAccount('First'), hotpAccount('Second')]);
       await app.pump(tester);
 
-      final handle = find.byTooltip(AccountsStrings.reorderHandle).first;
-      final gesture = await tester.startGesture(tester.getCenter(handle));
-      await tester.pump(const Duration(milliseconds: 100));
+      final row = find.text('First');
+      final gesture = await tester.startGesture(tester.getCenter(row));
+      // Hold past the long-press delay before moving.
+      await tester.pump(kLongPressTimeout + const Duration(milliseconds: 100));
       for (var i = 0; i < 10; i++) {
         await gesture.moveBy(const Offset(0, 30));
         await tester.pump(const Duration(milliseconds: 16));

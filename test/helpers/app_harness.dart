@@ -165,9 +165,11 @@ final class AppHarness {
     await tester.pump();
   }
 
-  /// Moves the fake clock and lets the ticker fire.
+  /// Moves the fake clock, lets the ticker fire, then lets short UI
+  /// animations (such as a code crossfading) finish.
   Future<void> advance(WidgetTester tester, Duration by) async {
     clock.advance(by);
     await tester.pump(by);
+    await tester.pump(const Duration(milliseconds: 300));
   }
 }

@@ -18,6 +18,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
   String? _first;
   String? _error;
   bool _busy = false;
+  int _errors = 0; // drives the PIN pad's shake
 
   Future<void> _onSubmit(String pin) async {
     final first = _first;
@@ -32,6 +33,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
       setState(() {
         _first = null;
         _error = LockStrings.mismatch;
+        _errors++;
       });
       return;
     }
@@ -94,6 +96,7 @@ class _PinSetupScreenState extends ConsumerState<PinSetupScreen> {
         // Confirming: the length is known from the first entry.
         autoSubmitLength: _first?.length,
         onSubmit: _onSubmit,
+        errorSignal: _errors,
         footer: confirming
             ? null
             : const Padding(

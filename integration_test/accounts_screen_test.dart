@@ -27,6 +27,14 @@ import 'package:path_provider/path_provider.dart';
 ///
 /// Screenshots are written to the app's files directory under `screenshots/`
 /// (pull with `adb exec-out run-as com.cypher.cypher cat files/screenshots/…`).
+/// The countdown rings animate continuously while codes are visible, so the
+/// screen never "settles"; wait a fixed time instead of pumpAndSettle.
+Future<void> settle(WidgetTester tester) async {
+  for (var i = 0; i < 10; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+}
+
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -116,7 +124,7 @@ void main() {
         child: const CypherApp(),
       ),
     );
-    await tester.pumpAndSettle();
+    await settle(tester);
   }
 
   Future<void> screenshot(String name) async {
@@ -149,7 +157,7 @@ void main() {
     // Copy the GitHub code via the Kotlin channel and read it back.
     final shown = tester.widget<Text>(sixDigit.first).data!;
     await tester.tap(sixDigit.first);
-    await tester.pumpAndSettle();
+    await settle(tester);
     final copied = await Clipboard.getData(Clipboard.kTextPlain);
     // The code may have rolled over between reading and tapping; either way
     // the clipboard holds 6 digits and never a secret.
@@ -162,7 +170,7 @@ void main() {
     );
 
     await binding.convertFlutterSurfaceToImage();
-    await tester.pumpAndSettle();
+    await settle(tester);
     await screenshot('accounts_copied');
 
     // After clearAfter the code is gone from the clipboard.
@@ -174,7 +182,7 @@ void main() {
 
     // HOTP: reveal the next code.
     await tester.tap(find.byTooltip(AccountsStrings.nextCode));
-    await tester.pumpAndSettle();
+    await settle(tester);
     expect(find.text('287 082'), findsOneWidget); // RFC 4226, counter 1
     await screenshot('accounts_hotp');
 
@@ -192,7 +200,7 @@ void main() {
     await pumpApp(tester, repo, clipboard);
 
     await tester.tap(find.textContaining(RegExp(r'^\d{3} \d{3}$')).first);
-    await tester.pumpAndSettle();
+    await settle(tester);
     await Clipboard.setData(const ClipboardData(text: 'my own note'));
 
     await tester.runAsync(

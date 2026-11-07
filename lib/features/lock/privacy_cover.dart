@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../shared/app_logo.dart';
 import 'lock_strings.dart';
 
 /// Covers the whole app while it is inactive or in the background, so the
@@ -19,8 +20,8 @@ class PrivacyCover extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.shield_outlined, size: 72, color: scheme.primary),
-              const SizedBox(height: 12),
+              const AppLogo(height: 80),
+              const SizedBox(height: 16),
               Text(
                 LockStrings.appName,
                 style: Theme.of(context).textTheme.titleLarge,

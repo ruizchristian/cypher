@@ -224,6 +224,7 @@ void main() {
     testWidgets('forgot PIN explains there is no recovery', (tester) async {
       final app = AppHarness();
       await app.pump(tester, start: LockStart.locked);
+      await tester.ensureVisible(find.text(LockStrings.forgotPin));
       await tester.tap(find.text(LockStrings.forgotPin));
       await tester.pumpAndSettle();
       expect(find.text(LockStrings.forgotPinBody), findsOneWidget);

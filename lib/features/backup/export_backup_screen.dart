@@ -23,6 +23,7 @@ class _ExportBackupScreenState extends ConsumerState<ExportBackupScreen> {
   bool _pinConfirmed = false;
   String? _pinError;
   bool _busy = false;
+  int _pinErrors = 0; // drives the PIN pad's shake
 
   final _password = TextEditingController();
   final _confirm = TextEditingController();
@@ -62,6 +63,7 @@ class _ExportBackupScreenState extends ConsumerState<ExportBackupScreen> {
           _pinError = null;
         case PinCheck.wrong:
           _pinError = BackupStrings.wrongPin;
+          _pinErrors++;
         case PinCheck.lockedOut:
           break; // the app has locked; the lock gate replaces this screen
       }
@@ -149,6 +151,7 @@ class _ExportBackupScreenState extends ConsumerState<ExportBackupScreen> {
                   .settings
                   .pinLength,
               onSubmit: _checkPin,
+              errorSignal: _pinErrors,
             )
           : _passwordStep(context),
     );

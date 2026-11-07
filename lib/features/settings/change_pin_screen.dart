@@ -22,6 +22,7 @@ class _ChangePinScreenState extends ConsumerState<ChangePinScreen> {
   String? _next;
   String? _error;
   bool _busy = false;
+  int _errors = 0; // drives the PIN pad's shake
 
   @override
   void dispose() {
@@ -52,6 +53,7 @@ class _ChangePinScreenState extends ConsumerState<ChangePinScreen> {
             _next = null;
             _step = _Step.next;
             _error = SettingsStrings.mismatch;
+            _errors++;
           });
           return;
         }
@@ -82,6 +84,7 @@ class _ChangePinScreenState extends ConsumerState<ChangePinScreen> {
               _next = null;
               _step = _Step.current;
               _error = SettingsStrings.wrongCurrentPin;
+              _errors++;
             });
           case ChangePinResult.lockedOut:
             break; // the app has locked; the lock gate replaces this screen
@@ -106,6 +109,7 @@ class _ChangePinScreenState extends ConsumerState<ChangePinScreen> {
         busy: _busy,
         submitLabel: SettingsStrings.continueLabel,
         onSubmit: _onSubmit,
+        errorSignal: _errors,
         // The current PIN's length is known; so is the new one when confirming.
         autoSubmitLength: switch (_step) {
           _Step.current => ref.read(lockServiceProvider).settings.pinLength,

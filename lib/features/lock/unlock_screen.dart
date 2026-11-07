@@ -22,6 +22,7 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
   String? _message;
   bool _isError = false;
   bool _busy = false;
+  int _errors = 0; // drives the PIN pad's shake
   Timer? _countdown;
 
   LockService get _service => ref.read(lockServiceProvider);
@@ -87,10 +88,12 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
           break; // the gate replaces this screen
         case PinRejected(:final attemptsBeforeWait):
           setState(() {
+            _errors++;
             _message = LockStrings.wrongPin(attemptsBeforeWait);
             _isError = true;
           });
         case PinLockedOut():
+          setState(() => _errors++);
           _syncWait();
       }
     } on Exception {
@@ -147,6 +150,7 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
         // Checks as soon as the last digit is typed (once the length is known).
         autoSubmitLength: _service.settings.pinLength,
         onSubmit: _submit,
+        errorSignal: _errors,
         onBiometric: _service.settings.biometricsEnabled ? _biometric : null,
         footer: Padding(
           padding: const EdgeInsets.only(top: 8),
