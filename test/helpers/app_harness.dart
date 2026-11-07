@@ -5,12 +5,15 @@ import 'package:cypher/core/otp/otp_parameters.dart';
 import 'package:cypher/core/otp/otp_secret.dart';
 import 'package:cypher/core/otp/otp_types.dart';
 import 'package:cypher/core/security/key_wrapper.dart';
+import 'package:cypher/core/security/pin_hasher.dart';
 import 'package:cypher/data/account_repository.dart';
+import 'package:cypher/data/lock_service.dart';
 import 'package:cypher/features/shared/providers.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../fakes/fake_biometrics.dart';
 import '../fakes/fake_clock.dart';
 import '../fakes/fake_qr_input.dart';
 import '../fakes/fake_secure_clipboard.dart';
@@ -28,6 +31,23 @@ OtpParameters totpAccount(String issuer, [String account = 'user']) =>
       accountName: account,
     );
 
+/// The PIN the harness sets up for tests that start locked or unlocked.
+const testPin = '123456';
+
+/// Cheap PIN hashing for tests (the real cost is benchmarked on device).
+const testPinParams = PinHashParams.pbkdf2(iterations: 1);
+
+enum LockStart {
+  /// No PIN yet: the app opens on PIN setup.
+  firstRun,
+
+  /// A PIN exists: the app opens on the lock screen.
+  locked,
+
+  /// A PIN exists and has been entered: the app opens on the account list.
+  unlocked,
+}
+
 OtpParameters hotpAccount(String issuer, [String account = 'user']) =>
     OtpParameters(
       type: OtpType.hotp,
@@ -36,13 +56,15 @@ OtpParameters hotpAccount(String issuer, [String account = 'user']) =>
       accountName: account,
     );
 
-/// The real app on in-memory storage, a fake clock and a fake clipboard.
+/// The real app (lock gate included) on in-memory storage, a fake clock,
+/// fake biometrics and a fake clipboard.
 final class AppHarness {
   AppHarness({int unixSeconds = 59})
     : clock = FakeClock.atUnixSeconds(unixSeconds);
 
   final FakeClock clock;
   final FakeSecureClipboard clipboard = FakeSecureClipboard();
+  final FakeBiometrics biometrics = FakeBiometrics();
   final FakeQrScanner scanner = FakeQrScanner();
   final FakeQrImageReader imageReader = FakeQrImageReader();
   final InMemorySecretStore secrets = InMemorySecretStore();
@@ -62,14 +84,50 @@ final class AppHarness {
   }
 
   late AccountRepository repository;
+  late LockService lock;
 
-  Future<void> pump(WidgetTester tester) async {
+  LockService newLockService(AccountRepository repository) => LockService(
+    store: secrets,
+    repository: repository,
+    biometrics: biometrics,
+    now: clock.now,
+    params: testPinParams,
+    hashInIsolate: false,
+  );
+
+  /// [legacyPin] simulates a PIN set before its length was recorded: the
+  /// lock screen then shows an Unlock button until the first unlock.
+  Future<void> pump(
+    WidgetTester tester, {
+    LockStart start = LockStart.unlocked,
+    bool legacyPin = false,
+  }) async {
     repository = newRepository();
+    lock = newLockService(repository);
+    if (start != LockStart.firstRun &&
+        await secrets.read('cypher.lock.pin.v1') == null) {
+      await secrets.write(
+        'cypher.lock.pin.v1',
+        await PinHasher.hash(testPin, params: testPinParams, inIsolate: false),
+      );
+      if (!legacyPin) {
+        await secrets.write(
+          'cypher.lock.settings.v1',
+          '{"biometrics":false,"autoLockSeconds":30,"pinLength":${testPin.length}}',
+        );
+      }
+    }
+    await lock.initialize();
+    if (start == LockStart.unlocked) {
+      final result = await lock.unlockWithPin(testPin);
+      expect(result, isA<PinAccepted>());
+    }
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           clockProvider.overrideWithValue(clock),
           accountRepositoryProvider.overrideWithValue(repository),
+          lockServiceProvider.overrideWithValue(lock),
           secureClipboardProvider.overrideWithValue(clipboard),
           qrScannerBuilderProvider.overrideWithValue(scanner.build),
           qrImageReaderProvider.overrideWithValue(imageReader),

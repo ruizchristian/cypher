@@ -30,6 +30,7 @@ paths:
 
 ## App lock
 
+- Implemented in M5: `lib/data/lock_service.dart` (logic), `lib/app/lock_gate.dart` (what is on screen), `lib/features/lock/` and `lib/features/settings/` (UI). Keep these invariants: the failed attempt is persisted **before** the PIN is checked; biometrics never bypass an active wait; while locked the app navigator is **not in the tree**; the lock navigator uses `HeroControllerScope.none`; on-device tests use their own `keyNamespace`. The PIN length is stored (lock settings, secure storage) so the pad checks on the last digit; wrong *current* PINs in Change PIN count towards the same throttle and a wait locks the app.
 - Lock on cold start and when resuming after a configurable background timeout. No code or account metadata renders before unlock.
 - Biometrics use `local_auth`. Keep a PIN as the fallback, so the lock still works when the device has no biometrics.
 - Store the PIN only as a KDF hash with a random salt (Argon2id or PBKDF2). Compare in constant time. Throttle failed attempts with escalating delays that survive an app restart.

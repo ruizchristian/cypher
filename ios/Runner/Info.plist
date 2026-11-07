@@ -6,6 +6,8 @@
 	<string>CypherAuth uses the camera to scan the QR code a service shows when you turn on two-factor authentication.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>CypherAuth reads the QR code in a screenshot or photo you choose.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>CypherAuth can use Face ID instead of your PIN to unlock your codes.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

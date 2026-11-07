@@ -4,15 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/account.dart';
 import '../../data/account_repository.dart';
 import '../add_account/add_account_sheet.dart';
+import '../settings/settings_screen.dart';
 import '../shared/providers.dart';
 import 'account_tile.dart';
 import 'accounts_strings.dart';
 import 'vault_unreadable_view.dart';
 
-/// Home screen: the account list.
-///
-/// Until the lock screen exists (M5), this screen opens the vault itself when
-/// it is locked. M5 moves unlocking behind the PIN/biometric gate.
+/// Home screen: the account list. Only reachable while unlocked: the lock gate
+/// (`app/lock_gate.dart`) opens the vault after the PIN or biometrics.
 class AccountsScreen extends ConsumerStatefulWidget {
   const AccountsScreen({super.key});
 
@@ -23,27 +22,17 @@ class AccountsScreen extends ConsumerStatefulWidget {
 class _AccountsScreenState extends ConsumerState<AccountsScreen> {
   final TextEditingController _search = TextEditingController();
   bool _searching = false;
-  bool _unlockFailed = false;
 
   @override
   void initState() {
     super.initState();
     _search.addListener(() => setState(() {}));
-    _unlock();
   }
 
   @override
   void dispose() {
     _search.dispose();
     super.dispose();
-  }
-
-  Future<void> _unlock() async {
-    try {
-      await ref.read(accountRepositoryProvider).unlock();
-    } on Exception {
-      if (mounted) setState(() => _unlockFailed = true);
-    }
   }
 
   void _setSearching(bool searching) {
@@ -87,13 +76,21 @@ class _AccountsScreenState extends ConsumerState<AccountsScreen> {
               icon: Icon(_searching ? Icons.close : Icons.search),
               onPressed: () => _setSearching(!_searching),
             ),
+          if (!_searching) ...[
+            IconButton(
+              tooltip: AccountsStrings.lockNow,
+              icon: const Icon(Icons.lock_outline),
+              onPressed: () => ref.read(lockServiceProvider).lock(),
+            ),
+            IconButton(
+              tooltip: AccountsStrings.settings,
+              icon: const Icon(Icons.settings_outlined),
+              onPressed: () => openSettings(context),
+            ),
+          ],
         ],
       ),
       body: switch (state) {
-        _ when _unlockFailed => const _Message(
-          icon: Icons.error_outline,
-          title: AccountsStrings.loadFailed,
-        ),
         VaultUnreadable(:final reason) => VaultUnreadableView(reason: reason),
         VaultUnlocked(:final accounts) when accounts.isEmpty => const _Message(
           icon: Icons.shield_outlined,

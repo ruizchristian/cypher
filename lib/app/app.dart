@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'lock_gate.dart';
 import 'routes.dart';
 import 'theme.dart';
 
@@ -18,6 +19,7 @@ class CypherApp extends StatelessWidget {
       themeMode: ThemeMode.system,
       initialRoute: AppRoutes.accounts,
       onGenerateRoute: onGenerateRoute,
+      builder: (context, child) => LockGate(child: child!),
     );
   }
 }

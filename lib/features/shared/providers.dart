@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/clock.dart';
 import '../../core/security/secure_clipboard.dart';
 import '../../data/account_repository.dart';
+import '../../data/lock_service.dart';
 import 'qr_input.dart';
 
 // Injected dependencies. They have no defaults on purpose: `main.dart` wires
@@ -72,3 +73,22 @@ final qrScannerBuilderProvider = Provider<QrScannerBuilder>(
 final qrImageReaderProvider = Provider<QrImageReader>(
   (ref) => throw UnimplementedError('qrImageReaderProvider must be overridden'),
 );
+
+/// The app lock (PIN, biometrics, auto-lock). Wired in `main.dart`.
+final lockServiceProvider = Provider<LockService>(
+  (ref) => throw UnimplementedError('lockServiceProvider must be overridden'),
+);
+
+/// The lock's current state followed by every change.
+final lockStateProvider = StreamProvider<LockState>((ref) {
+  final service = ref.watch(lockServiceProvider);
+  final controller = StreamController<LockState>();
+  // Subscribe before reading the current state, so no change is missed.
+  final subscription = service.states.listen(controller.add);
+  controller.add(service.state);
+  ref.onDispose(() {
+    subscription.cancel();
+    controller.close();
+  });
+  return controller.stream;
+});

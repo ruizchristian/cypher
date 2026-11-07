@@ -87,7 +87,10 @@ Iterable<String> _requestedPermissions(String manifest) sync* {
 /// permissions that never appear in our own manifest (M4: camera plugins
 /// pulled in audio, storage and network-state permissions).
 void _checkReleaseManifest() {
-  const allowed = {'android.permission.CAMERA'};
+  const allowed = {
+    'android.permission.CAMERA', // QR scanning (M4)
+    'android.permission.USE_BIOMETRIC', // biometric unlock (M5)
+  };
   const internalSuffix = '.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION';
 
   final dir = Directory(
@@ -239,9 +242,19 @@ void _checkPlatformHardening() {
         .listSync(recursive: true)
         .whereType<File>()
         .where((f) => f.path.endsWith('MainActivity.kt'));
-    if (!activities.any((f) => f.readAsStringSync().contains('FLAG_SECURE'))) {
-      _todos.add(
-        'FLAG_SECURE not set in MainActivity (screenshots/recents not blocked)',
+    final source = [for (final f in activities) f.readAsStringSync()].join();
+    if (!RegExp(r'setFlags\(\s*WindowManager\.LayoutParams\.FLAG_SECURE')
+        .hasMatch(source)) {
+      _errors.add(
+        'MainActivity must set FLAG_SECURE (blocks screenshots, recording and '
+        'the recents thumbnail)',
+      );
+    }
+    if (!RegExp(r'class MainActivity\s*:\s*FlutterFragmentActivity')
+        .hasMatch(source)) {
+      _errors.add(
+        'MainActivity must extend FlutterFragmentActivity (required by '
+        'local_auth for the biometric prompt)',
       );
     }
   }

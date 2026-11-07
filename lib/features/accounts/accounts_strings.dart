@@ -9,7 +9,8 @@ abstract final class AccountsStrings {
   static const String searchHint = 'Search accounts';
   static const String search = 'Search';
   static const String closeSearch = 'Close search';
-  static const String loadFailed = "Couldn't open your accounts.";
+  static const String lockNow = 'Lock now';
+  static const String settings = 'Settings';
   static const String saveFailed = "Couldn't save your change. Try again.";
 
   static const String copied = 'Code copied. It will be cleared in 30 seconds.';

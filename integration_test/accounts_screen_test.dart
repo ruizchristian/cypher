@@ -10,7 +10,9 @@ import 'package:cypher/core/otp/otp_types.dart';
 import 'package:cypher/core/security/key_wrapper.dart';
 import 'package:cypher/core/security/platform/flutter_secret_store.dart';
 import 'package:cypher/core/security/platform/flutter_secure_clipboard.dart';
+import 'package:cypher/core/security/platform/local_auth_biometrics.dart';
 import 'package:cypher/data/account_repository.dart';
+import 'package:cypher/data/lock_service.dart';
 import 'package:cypher/features/accounts/accounts_strings.dart';
 import 'package:cypher/features/shared/providers.dart';
 import 'package:flutter/material.dart';
@@ -30,8 +32,12 @@ void main() {
 
   const directoryName = 'vault_accounts_ui_test';
   const keyName = 'cypher.vault.dek.accounts-ui-test';
+  const lockNamespace = 'cypher.lock.accounts-ui-test';
 
   Future<void> cleanUp() async {
+    for (final key in ['pin', 'settings', 'throttle']) {
+      await const FlutterSecretStore().delete('$lockNamespace.$key.v1');
+    }
     await StoredKeyWrapper(
       const FlutterSecretStore(),
       storageKey: keyName,
@@ -89,11 +95,22 @@ void main() {
     AccountRepository repo,
     FlutterSecureClipboard clipboard,
   ) async {
+    // The app now sits behind the lock: set a PIN (which opens the vault)
+    // before showing the accounts screen.
+    final lock = LockService(
+      store: const FlutterSecretStore(),
+      repository: repo,
+      biometrics: LocalAuthBiometrics(),
+      keyNamespace: lockNamespace,
+    );
+    await lock.initialize();
+    await lock.createPin('482913');
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           clockProvider.overrideWithValue(const SystemClock()),
           accountRepositoryProvider.overrideWithValue(repo),
+          lockServiceProvider.overrideWithValue(lock),
           secureClipboardProvider.overrideWithValue(clipboard),
         ],
         child: const CypherApp(),
